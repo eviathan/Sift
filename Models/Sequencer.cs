@@ -25,6 +25,7 @@ namespace Sift.Models
 
             IsPlaying = true;
             StartTime = DateTime.Now;
+            _sequence.ResetTrees();
             _cancellationTokenSource = new CancellationTokenSource();
 
             Task.Run(() => ExecuteSequence(_cancellationTokenSource.Token));
@@ -34,7 +35,6 @@ namespace Sift.Models
         {
             IsPlaying = false;
             BeatCount = default;
-            _sequence.ResetTrees();
 
             _cancellationTokenSource?.Cancel();
             _cancellationTokenSource = new CancellationTokenSource();

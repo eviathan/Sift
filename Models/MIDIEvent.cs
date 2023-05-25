@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Sift.Models
 {
-    public class Event
+    public class MIDIEvent
     {
         public int TimeStamp { get; set; }
 

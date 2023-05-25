@@ -9,9 +9,11 @@ namespace Sift.Models
     {
         public ITreeNode Next { get; set; }
 
+        public MIDIEvent Event { get; set; }
+
         void ITreeNode.Invoke()
         {
-            Console.WriteLine("Wooter");
+            Console.WriteLine($"Pitch: {Event.Pitch}");
         }
     }
 }
