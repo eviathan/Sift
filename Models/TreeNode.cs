@@ -7,6 +7,7 @@ namespace Sift.Models
 {
     public class TreeNode
     {
+        public TreeNodeType Type { get; set; }
         public TreeNode Next { get; internal set; }
     }
 }

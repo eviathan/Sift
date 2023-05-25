@@ -7,7 +7,7 @@ namespace Sift.Models
 {
     public class Tree
     {
-        public TreeNode RootNode { get; set; }
+        public TreeNode StartNode { get; set; }
         public TreeNode CurrentNode { get; set; }
         public TreeNode NextNode => CurrentNode.Next;
     }
