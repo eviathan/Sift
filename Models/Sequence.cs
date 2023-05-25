@@ -15,11 +15,23 @@ namespace Sift.Models
         // - We will probably want to avoid GC so use a Pool for the TreeNodes
         public List<Tree> Trees { get; set; } = new List<Tree>();
 
-        public Dictionary<(int x, int y), TreeNode> TreeNodeGrid = new Dictionary<(int x, int y), TreeNode>();
+        public Dictionary<(int x, int y), ITreeNode> TreeNodeGrid = new Dictionary<(int x, int y), ITreeNode>();
         
         public Sequence()
         {
-            var node1 = new TreeNode {  };   
+            var node4 = new MidiEventTreeNode {  };   
+            var node3 = new MidiEventTreeNode { Next = node4 };   
+            var node2 = new MidiEventTreeNode { Next = node3 };   
+            var node1 = new MidiEventTreeNode { Next = node2 };  
+
+            var tree = new Tree(node1);
+            Trees.Add(tree);
+        }
+
+        public void ResetTrees()
+        {
+            foreach (var tree in Trees)
+                tree.ResetTree();
         }
     }
 }

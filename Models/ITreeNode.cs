@@ -5,9 +5,10 @@ using System.Threading.Tasks;
 
 namespace Sift.Models
 {
-    public class TreeNode
+    public interface ITreeNode
     {
-        public TreeNodeType Type { get; set; }
-        public TreeNode Next { get; internal set; }
+        ITreeNode Next { get; set; }
+        
+        void Invoke();
     }
 }

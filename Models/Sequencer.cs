@@ -34,6 +34,7 @@ namespace Sift.Models
         {
             IsPlaying = false;
             BeatCount = default;
+            _sequence.ResetTrees();
 
             _cancellationTokenSource?.Cancel();
             _cancellationTokenSource = new CancellationTokenSource();
@@ -49,7 +50,8 @@ namespace Sift.Models
 
                 if (currentTimestamp >= NextBeatTimeInMs())
                 {
-                    Console.WriteLine($"Beat Count: {BeatCount}");
+                    foreach (var tree in _sequence.Trees)
+                        tree.Traverse();
 
                     BeatCount++;
                 }

@@ -7,8 +7,27 @@ namespace Sift.Models
 {
     public class Tree
     {
-        public TreeNode StartNode { get; set; }
-        public TreeNode CurrentNode { get; set; }
-        public TreeNode NextNode => CurrentNode.Next;
+        public ITreeNode StartNode { get; private set; }
+        public ITreeNode CurrentNode { get; private set; }
+
+        public Tree(ITreeNode startNode)
+        {
+            StartNode = startNode;
+            CurrentNode = startNode;
+        }
+
+        public void Traverse()
+        {
+            if(CurrentNode == null)
+                return;
+            
+            CurrentNode.Invoke();
+            CurrentNode = CurrentNode.Next;
+        }
+
+        public void ResetTree()
+        {
+            CurrentNode = StartNode;
+        }
     }
 }
