@@ -28,7 +28,7 @@ public class Program
                 else if(key == ConsoleKey.Spacebar)
                 {
                     if(sequencer.IsPlaying) sequencer.Stop();
-                    else await sequencer.Play();
+                    else sequencer.Play();
                 }
             }
         }

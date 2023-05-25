@@ -8,7 +8,7 @@ namespace Sift.Models
     public class Sequence
     {
         public ushort Tempo { get; private set; } = 120;
-        
+
         // NOTES
         // - We will probably want to keep a cyclic directional tree for the traversal/ sequence 
         // - we will probably want to keep a dictionary to store the positional data of the nodes

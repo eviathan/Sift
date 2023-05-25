@@ -11,15 +11,15 @@ namespace Sift.Models
         public DateTime StartTime { get; private set; }
         public int BeatCount { get; private set; }
 
-        private CancellationTokenSource? _cancellationTokenSource { get; set; }
         private Sequence _sequence { get; set; }
+        private CancellationTokenSource? _cancellationTokenSource { get; set; }
 
         public Sequencer(Sequence sequence)
         {
             _sequence = sequence;
         }
 
-        public async Task Play()
+        public void Play()
         {
             if(IsPlaying) return;
 
@@ -27,18 +27,21 @@ namespace Sift.Models
             StartTime = DateTime.Now;
             _cancellationTokenSource = new CancellationTokenSource();
 
-            await Task.Run(() => ExecuteSequence(_cancellationTokenSource.Token));
+            Task.Run(() => ExecuteSequence(_cancellationTokenSource.Token));
         }
 
         public void Stop()
         {
             IsPlaying = false;
+            BeatCount = default;
+
             _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource = new CancellationTokenSource();
         }
 
         private void ExecuteSequence(CancellationToken cancellationToken)
         {
-            while (IsPlaying)
+            while (!cancellationToken.IsCancellationRequested && IsPlaying)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
