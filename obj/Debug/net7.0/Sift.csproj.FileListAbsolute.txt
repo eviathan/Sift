@@ -1,0 +1,15 @@
+/Volumes/Work/Dev/Sift/bin/Debug/net7.0/Sift
+/Volumes/Work/Dev/Sift/bin/Debug/net7.0/Sift.deps.json
+/Volumes/Work/Dev/Sift/bin/Debug/net7.0/Sift.runtimeconfig.json
+/Volumes/Work/Dev/Sift/bin/Debug/net7.0/Sift.dll
+/Volumes/Work/Dev/Sift/bin/Debug/net7.0/Sift.pdb
+/Volumes/Work/Dev/Sift/obj/Debug/net7.0/Sift.csproj.AssemblyReference.cache
+/Volumes/Work/Dev/Sift/obj/Debug/net7.0/Sift.GeneratedMSBuildEditorConfig.editorconfig
+/Volumes/Work/Dev/Sift/obj/Debug/net7.0/Sift.AssemblyInfoInputs.cache
+/Volumes/Work/Dev/Sift/obj/Debug/net7.0/Sift.AssemblyInfo.cs
+/Volumes/Work/Dev/Sift/obj/Debug/net7.0/Sift.csproj.CoreCompileInputs.cache
+/Volumes/Work/Dev/Sift/obj/Debug/net7.0/Sift.dll
+/Volumes/Work/Dev/Sift/obj/Debug/net7.0/refint/Sift.dll
+/Volumes/Work/Dev/Sift/obj/Debug/net7.0/Sift.pdb
+/Volumes/Work/Dev/Sift/obj/Debug/net7.0/Sift.genruntimeconfig.cache
+/Volumes/Work/Dev/Sift/obj/Debug/net7.0/ref/Sift.dll
