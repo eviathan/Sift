@@ -1,8 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "mtNdwKKRlvi4/aDueh6r2+cnneA+BoTvoIrhpKiSIwatb7tQsDRz2uHchcwmUiomL/B66823TmAa+3p+vjsmig==",
+  "dgSpecHash": "faEFvVP/eBuNF5wIMnVvQLusxA6JK0X+e4X3fD65iv4v+7DkDuy0QwqUBh8/emVONj32cG5bCJ8W96/32DQztg==",
   "success": true,
   "projectFilePath": "/Volumes/Work/Dev/Sift/Sift.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "/Users/brian/.nuget/packages/managed-midi/1.10.1/managed-midi.1.10.1.nupkg.sha512"
+  ],
   "logs": []
 }

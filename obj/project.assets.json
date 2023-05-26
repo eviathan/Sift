@@ -1,11 +1,69 @@
 {
   "version": 3,
   "targets": {
-    "net7.0": {}
+    "net7.0": {
+      "managed-midi/1.10.1": {
+        "type": "package",
+        "compile": {
+          "lib/netcoreapp2.1/Commons.Music.Midi.dll": {
+            "related": ".pdb"
+          },
+          "lib/netcoreapp2.1/alsa-sharp.dll": {
+            "related": ".pdb"
+          }
+        },
+        "runtime": {
+          "lib/netcoreapp2.1/Commons.Music.Midi.dll": {
+            "related": ".pdb"
+          },
+          "lib/netcoreapp2.1/alsa-sharp.dll": {
+            "related": ".pdb"
+          }
+        }
+      }
+    }
   },
-  "libraries": {},
+  "libraries": {
+    "managed-midi/1.10.1": {
+      "sha512": "5k3IOpByUZku1kDDFLhD25NwogNeXipH7bPE2b+WIRwpJdntRuIv4NchZoI5AMZxTzzSZW6If/l9+zhLxzORgA==",
+      "type": "package",
+      "path": "managed-midi/1.10.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE",
+        "README.md",
+        "lib/MonoAndroid/Commons.Music.Midi.dll",
+        "lib/MonoAndroid/Commons.Music.Midi.pdb",
+        "lib/XamarinMac/Commons.Music.Midi.dll",
+        "lib/XamarinMac/Commons.Music.Midi.pdb",
+        "lib/XamariniOS/Commons.Music.Midi.dll",
+        "lib/XamariniOS/Commons.Music.Midi.pdb",
+        "lib/net45/Commons.Music.Midi.dll",
+        "lib/net45/Commons.Music.Midi.pdb",
+        "lib/net45/alsa-sharp.dll",
+        "lib/net45/alsa-sharp.pdb",
+        "lib/net6.0-ios16/Commons.Music.Midi.dll",
+        "lib/net6.0-ios16/Commons.Music.Midi.pdb",
+        "lib/netcoreapp2.1/Commons.Music.Midi.dll",
+        "lib/netcoreapp2.1/Commons.Music.Midi.pdb",
+        "lib/netcoreapp2.1/alsa-sharp.dll",
+        "lib/netcoreapp2.1/alsa-sharp.pdb",
+        "lib/netstandard2.0/Commons.Music.Midi.deps.json",
+        "lib/netstandard2.0/Commons.Music.Midi.dll",
+        "lib/netstandard2.0/Commons.Music.Midi.pdb",
+        "lib/uap10.0/Commons.Music.Midi.dll",
+        "lib/uap10.0/Commons.Music.Midi.pdb",
+        "lib/uap10.0/Commons.Music.Midi.pri",
+        "managed-midi.1.10.1.nupkg.sha512",
+        "managed-midi.nuspec"
+      ]
+    }
+  },
   "projectFileDependencyGroups": {
-    "net7.0": []
+    "net7.0": [
+      "managed-midi >= 1.10.1"
+    ]
   },
   "packageFolders": {
     "/Users/brian/.nuget/packages/": {}
@@ -44,6 +102,12 @@
     "frameworks": {
       "net7.0": {
         "targetAlias": "net7.0",
+        "dependencies": {
+          "managed-midi": {
+            "target": "Package",
+            "version": "[1.10.1, )"
+          }
+        },
         "imports": [
           "net461",
           "net462",

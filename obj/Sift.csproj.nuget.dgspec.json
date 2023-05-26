@@ -38,6 +38,12 @@
       "frameworks": {
         "net7.0": {
           "targetAlias": "net7.0",
+          "dependencies": {
+            "managed-midi": {
+              "target": "Package",
+              "version": "[1.10.1, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",

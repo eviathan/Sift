@@ -20,30 +20,42 @@ namespace Sift.Models
         public Sequence()
         {
             // NOTE: This is just some test data
-            var node4 = new MidiEventTreeNode 
+            var node6 = new MidiEventTreeNode 
             { 
-                Event = new MIDIEvent { Pitch = 4 }
+                Event = new MIDIEvent { Pitch = 36 + (12 * 3) }
             };
 
-            var node3 = new MidiEventTreeNode 
+            var node5 = new MidiEventTreeNode 
             { 
-                Next = node4, 
-                Event = new MIDIEvent { Pitch = 3 }
+                Next = node6, 
+                Event = new MIDIEvent { Pitch = 39 + (12 * 3) }
+            };
+
+            var node4 = new MidiEventTreeNode
+            {
+                Next = node5,
+                Event = new MIDIEvent { Pitch = 43 + (12 * 3) }
+            };
+
+            var node3 = new MidiEventTreeNode
+            {
+                Next = node4,
+                Event = new MIDIEvent { Pitch = 44 + (12 * 3) }
             };
 
             var node2 = new MidiEventTreeNode
             {
                 Next = node3,
-                Event = new MIDIEvent { Pitch = 2 }
+                Event = new MIDIEvent { Pitch = 43 + (12 * 3) }
             };
 
             var node1 = new MidiEventTreeNode
             {
                 Next = node2,
-                Event = new MIDIEvent { Pitch = 1 }
+                Event = new MIDIEvent { Pitch = 39 + (12 * 3) }
             };
 
-            node4.Next = node1;
+            node6.Next = node1;
 
             var tree = new Tree(node1);
             Trees.Add(tree);

@@ -13,3 +13,6 @@
 /Volumes/Work/Dev/Sift/obj/Debug/net7.0/Sift.pdb
 /Volumes/Work/Dev/Sift/obj/Debug/net7.0/Sift.genruntimeconfig.cache
 /Volumes/Work/Dev/Sift/obj/Debug/net7.0/ref/Sift.dll
+/Volumes/Work/Dev/Sift/bin/Debug/net7.0/Commons.Music.Midi.dll
+/Volumes/Work/Dev/Sift/bin/Debug/net7.0/alsa-sharp.dll
+/Volumes/Work/Dev/Sift/obj/Debug/net7.0/Sift.csproj.CopyComplete
