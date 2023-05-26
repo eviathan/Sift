@@ -30,6 +30,12 @@ public class MIDIService
         _midiOutput?.Send(new byte[] { 0x80, (byte)note, 0x7F }, 0, 3, 0);
     }
 
+    public void KillAllNotes()
+    {
+        for (int i = 0; i < 128; i++)
+            SendMidiNoteOff(i);
+    }
+
     public async Task OpenOutput()
     {
         _midiOutput = await _midiAccess.OpenOutputAsync(_outputDevice.Id);

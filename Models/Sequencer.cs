@@ -49,6 +49,7 @@ namespace Sift.Models
             BeatCount = default;
             _stopwatch.Reset();
             _sequence.ResetTrees();
+            MIDIService.Instance.KillAllNotes();
         }
 
         private void ExecuteSequence()
