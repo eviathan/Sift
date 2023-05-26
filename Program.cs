@@ -16,7 +16,8 @@ public class Program
 
         while(true)
         {
-            // NOTE: when we need to handle move this into an abstraction
+            // NOTE: when we need to handle more input events 
+            // move this into a temporary abstraction
             if (Console.KeyAvailable)
             {
                 var key = Console.ReadKey(true).Key;

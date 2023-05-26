@@ -66,3 +66,30 @@ namespace Sift.Models
         }
     }
 }
+
+// NOTE: Use this to improve timing and reduce the unecessary thread overhead.
+// On each traversal:
+// - Send MIDI Note On to current TreeNode event and MIDI Note Off to the previous
+
+// using System.Diagnostics;
+
+// private readonly int ticksPerSemiquaver;
+// ticksPerSemiquaver = (int)(Stopwatch.Frequency * 60.0 / bpm / 4);
+
+// public void Start()
+//     {
+//         stopwatch.Start();
+//         new Thread(ProcessEvents) { IsBackground = true }.Start();
+//     }
+
+//     private void ProcessEvents()
+//     {
+//         while (true)
+//         {
+//             if (stopwatch.ElapsedTicks >= tree.CurrentNode.Timestamp * ticksPerSemiquaver)
+//             {
+//                 tree.Traverse();
+//                 stopwatch.Restart();
+//             }
+//         }
+//     }
