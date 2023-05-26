@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace Sift.Models
 {
@@ -12,7 +13,7 @@ namespace Sift.Models
         public int BeatCount { get; private set; }
 
         private Sequence _sequence { get; set; }
-        private CancellationTokenSource? _cancellationTokenSource { get; set; }
+        private Stopwatch _stopwatch { get; set; } = new Stopwatch();
 
         public Sequencer(Sequence sequence)
         {
@@ -25,71 +26,45 @@ namespace Sift.Models
 
             IsPlaying = true;
             StartTime = DateTime.Now;
-            _sequence.ResetTrees();
-            _cancellationTokenSource = new CancellationTokenSource();
 
-            Task.Run(() => ExecuteSequence(_cancellationTokenSource.Token));
+            _stopwatch.Start();
+
+            var sequenceThread = new Thread(ExecuteSequence) 
+            { 
+                IsBackground = true
+            };
+            
+            sequenceThread.Start();
         }
 
         public void Stop()
         {
             IsPlaying = false;
             BeatCount = default;
-
-            _cancellationTokenSource?.Cancel();
-            _cancellationTokenSource = new CancellationTokenSource();
+            _stopwatch.Reset();
+            _sequence.ResetTrees();
         }
 
-        private void ExecuteSequence(CancellationToken cancellationToken)
+        private void ExecuteSequence()
         {
-            while (!cancellationToken.IsCancellationRequested && IsPlaying)
+            while (IsPlaying)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var currentTimestamp = (DateTime.Now - StartTime).TotalMilliseconds;
-
-                if (currentTimestamp >= NextBeatTimeInMs())
+                if (_stopwatch.ElapsedMilliseconds >= BeatTimeInMs())
                 {
                     foreach (var tree in _sequence.Trees)
                         tree.Traverse();
 
                     BeatCount++;
+                    _stopwatch.Restart();
                 }
             }
         }
 
-        private double NextBeatTimeInMs() 
+        private double BeatTimeInMs() 
         {
             var crotchetBeatLengthInMs = 60000.0 / _sequence.Tempo;
             double semiquaverLengthInMs = crotchetBeatLengthInMs / 4;
-            return semiquaverLengthInMs * (BeatCount + 1);
+            return semiquaverLengthInMs;
         }
     }
 }
-
-// NOTE: Use this to improve timing and reduce the unecessary thread overhead.
-// On each traversal:
-// - Send MIDI Note On to current TreeNode event and MIDI Note Off to the previous
-
-// using System.Diagnostics;
-
-// private readonly int ticksPerSemiquaver;
-// ticksPerSemiquaver = (int)(Stopwatch.Frequency * 60.0 / bpm / 4);
-
-// public void Start()
-//     {
-//         stopwatch.Start();
-//         new Thread(ProcessEvents) { IsBackground = true }.Start();
-//     }
-
-//     private void ProcessEvents()
-//     {
-//         while (true)
-//         {
-//             if (stopwatch.ElapsedTicks >= tree.CurrentNode.Timestamp * ticksPerSemiquaver)
-//             {
-//                 tree.Traverse();
-//                 stopwatch.Restart();
-//             }
-//         }
-//     }
