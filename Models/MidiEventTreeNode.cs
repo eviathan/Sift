@@ -11,9 +11,14 @@ namespace Sift.Models
 
         public MIDIEvent Event { get; set; }
 
-        void ITreeNode.Invoke()
+        void ITreeNode.DidStart()
         {
             MIDIService.Instance.SendMidiNoteOn(Event.Pitch);
+        }
+
+        public void DidEnd()
+        {
+            MIDIService.Instance.SendMidiNoteOff(Event.Pitch);
         }
     }
 }

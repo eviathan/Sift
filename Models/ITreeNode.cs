@@ -8,7 +8,8 @@ namespace Sift.Models
     public interface ITreeNode
     {
         ITreeNode Next { get; set; }
-        
-        void Invoke();
+
+        void DidEnd();
+        void DidStart();
     }
 }

@@ -31,10 +31,7 @@ public class MIDIService
         }
         
         Console.WriteLine($"NoteOn: {note}");
-
-        // TODO: This needs be determinned by the note length/ or a better way than just chewing through threads
-        // var midiOutput = _midiAccess.OpenOutputAsync(_outputDevice.Id);
-        _midiOutput?.Send(new byte[] { 0x90, (byte)note, 0x7F }, 0, 3, 0); // Note on
+        _midiOutput?.Send(new byte[] { 0x90, (byte)note, 0x7F }, 0, 3, 0);
     }
 
     public void SendMidiNoteOff(int note)
@@ -46,7 +43,7 @@ public class MIDIService
         }
         
         Console.WriteLine($"Note Off: {note}");
-        _midiOutput?.Send(new byte[] { 0x80, (byte)note, 0x7F }, 0, 3, 0); // Note off
+        _midiOutput?.Send(new byte[] { 0x80, (byte)note, 0x7F }, 0, 3, 0);
     }
 
     public async Task OpenOutput()

@@ -9,9 +9,8 @@ namespace Sift.Models
     {
         public ITreeNode Next { get; set; }
 
-        public void Invoke()
-        {
-            
-        }
+        public void DidStart() { }
+
+        public void DidEnd() { }
     }
 }
