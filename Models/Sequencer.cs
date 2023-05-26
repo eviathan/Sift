@@ -12,7 +12,7 @@ namespace Sift.Models
         public DateTime StartTime { get; private set; }
         public int BeatCount { get; private set; }
 
-        private const int BUSY_WAITING_TIMEOUT  = 1; 
+        private const int BUSY_WAITING_TIMEOUT_IN_MS = 1; 
 
         private Sequence _sequence { get; set; }
 
@@ -67,7 +67,7 @@ namespace Sift.Models
                 }
                 else
                 {
-                    Thread.Sleep(BUSY_WAITING_TIMEOUT);
+                    Thread.Sleep(BUSY_WAITING_TIMEOUT_IN_MS);
                 }
             }
         }
