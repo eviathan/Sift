@@ -13,7 +13,7 @@ namespace Sift.Models
 
         void ITreeNode.Invoke()
         {
-            Task.Run(() => MIDIService.SendMidiNote(Event.Pitch));
+            MIDIService.Instance.SendMidiNoteOn(Event.Pitch);
         }
     }
 }
