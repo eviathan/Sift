@@ -8,7 +8,7 @@ public class Program
 {
     public static async Task Main()
     {
-        var sequence = new Sequence();
+        var sequence = new Sequence().Basic();
         var sequencer = new Sequencer(sequence);
 
         await MIDIService.Instance.OpenOutput();
