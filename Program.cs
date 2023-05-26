@@ -10,7 +10,7 @@ public class Program
     {
         var sequence = new Sequence();
         var sequencer = new Sequencer(sequence);
-        
+
         await MIDIService.Instance.OpenOutput();
 
         Logger.WriteBanner("Sift v0.0.1");
@@ -26,6 +26,7 @@ public class Program
                 if (key == ConsoleKey.Q)
                 {
                     Console.WriteLine("Quitting the application...");
+                    MIDIService.Instance.KillAllNotes();
                     break;
                 }
                 else if(key == ConsoleKey.Spacebar)
