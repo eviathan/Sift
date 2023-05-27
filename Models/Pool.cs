@@ -7,7 +7,12 @@ namespace Sift.Models
 {
     public class Pool<TItem>
     {
-        internal TItem GetNode<TItem>()
+        public TItem TakeNode<TItem>()
+        {
+            throw new NotImplementedException();
+        }
+
+        public TItem ReturnNode<TItem>(TItem item)
         {
             throw new NotImplementedException();
         }
