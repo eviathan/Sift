@@ -15,7 +15,7 @@ public class MIDIService
         _midiAccess = MidiAccessManager.Default as IMidiAccess2 ?? throw new Exception("Could not find default MIDIAccess");
 
          // TODO: THIS NEEDS TO BE SET THROUGH THE UI (and or through a virtual MIDI port) at the moment its sort of hardwired to what ever hardware synth I enable
-        _outputDevice = _midiAccess.Outputs.ElementAtOrDefault(1) ?? throw new Exception("No MIDI Device found");
+        _outputDevice = _midiAccess.Outputs.FirstOrDefault() ?? throw new Exception("No MIDI Device found");
     }
 
     public void SendMidiNoteOn(int note)

@@ -13,11 +13,13 @@ namespace Sift.Models
 
         void ITreeNode.DidStart()
         {
+            Console.WriteLine($"Note On: {Event.Pitch}");
             MIDIService.Instance.SendMidiNoteOn(Event.Pitch);
         }
 
         public void DidEnd()
         {
+            Console.WriteLine($"Note Off: {Event.Pitch}");
             MIDIService.Instance.SendMidiNoteOff(Event.Pitch);
         }
     }

@@ -9,10 +9,14 @@ namespace Sift.Models
     {
         public ushort Tempo { get; private set; } = 120;
 
+        // NOTES:
+        // Maybe I can do the beat divisions like ableton does. i.e. as floats where 1 is equal to a full bar of 4/4 and everything else is relaitve to it. i.e. 1 crotchet beat then would be 0.25, a qaiver would be would be equal to 0.0625 and a bar of 16/17 would be 1.0625
+        public double BeatDivision { get; private set; } = 0.25; // Crotchets
+
         // NOTES
         // - We will probably want to keep a cyclic directional tree for the traversal/ sequence 
         // - we will probably want to keep a dictionary to store the positional data of the nodes
-        // - We will probably want to avoid GC so use a Pool for the TreeNodes
+        // - We will probably want to avoid GC so use a Pool for the TreeNodes 
         public List<Tree> Trees { get; set; } = new List<Tree>();
 
         // TODO: WE WILL PROBABLLY NEED A GRID FOR EACH TYPE OF TREE NODE
