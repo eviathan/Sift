@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Diagnostics;
 
-namespace Sift.Models
+namespace Sift.Sequencer
 {
     public class Sequencer
     {

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading;
 using System.Collections.Generic;
-using Sift.Models;
 using Sift.Logging;
+using Sift.Sequencer;
 
 public class Program
 {

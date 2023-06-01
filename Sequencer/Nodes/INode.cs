@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Sift.Models
+namespace Sift.Sequencer.Nodes
 {
-    public interface ITreeNode
+    public interface INode
     {
-        ITreeNode Next { get; set; }
+        INode Next { get; set; }
 
         void DidEnd();
         void DidStart();

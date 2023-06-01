@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Sift.Sequencer.Nodes;
 
-namespace Sift.Models
+namespace Sift.Sequencer
 {
     public class Sequence
     {
@@ -16,12 +17,12 @@ namespace Sift.Models
         public List<Tree> Trees { get; set; } = new List<Tree>();
 
         // TODO: WE WILL PROBABLLY NEED A GRID FOR EACH TYPE OF TREE NODE
-        public Dictionary<(int x, int y), ITreeNode> TreeNodeGrid = new Dictionary<(int x, int y), ITreeNode>();
+        public Dictionary<(int x, int y), INode> TreeNodeGrid = new Dictionary<(int x, int y), INode>();
 
-        private Dictionary<Type, Pool<ITreeNode>> _treeNodePools { get; set; } = new Dictionary<Type, Pool<ITreeNode>>();
+        private Dictionary<Type, Pool<INode>> _treeNodePools { get; set; } = new Dictionary<Type, Pool<INode>>();
 
         public void AddNode<TTreeNode>(int x, int y)
-            where TTreeNode : ITreeNode
+            where TTreeNode : INode
         {
             var treeNodeType = typeof(TTreeNode);
             var newTreeNode = _treeNodePools[treeNodeType].TakeNode<TTreeNode>();
@@ -33,19 +34,19 @@ namespace Sift.Models
             else 
             {
                 if(!_treeNodePools.ContainsKey(treeNodeType))
-                    _treeNodePools[treeNodeType] = new Pool<ITreeNode>();
+                    _treeNodePools[treeNodeType] = new Pool<INode>();
 
                 TreeNodeGrid.Add((x, y), newTreeNode);
             }
         }
 
         public void RemoveNode<TTreeNode>(int x, int y)
-            where TTreeNode : ITreeNode 
+            where TTreeNode : INode 
         {
             if(TreeNodeGrid.TryGetValue((x, y), out var treeNode))
             {
                 var treeNodeType = typeof(TTreeNode);
-                _treeNodePools[treeNodeType].ReturnNode<ITreeNode>(treeNode);
+                _treeNodePools[treeNodeType].ReturnNode<INode>(treeNode);
             }
 
         }

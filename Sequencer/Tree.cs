@@ -2,16 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Sift.Sequencer.Nodes;
 
-namespace Sift.Models
+namespace Sift.Sequencer
 {
     public class Tree
     {
-        public ITreeNode StartNode { get; private set; }
-        public ITreeNode? PreviousNode { get; private set; }
-        public ITreeNode CurrentNode { get; private set; }
+        public INode StartNode { get; private set; }
+        public INode? PreviousNode { get; private set; }
+        public INode CurrentNode { get; private set; }
 
-        public Tree(ITreeNode startNode)
+        public Tree(INode startNode)
         {
             StartNode = startNode;
             CurrentNode = startNode;

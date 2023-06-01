@@ -1,4 +1,5 @@
 using Commons.Music.Midi;
+using CoreMidi;
 
 public class MIDIService
 {
@@ -12,10 +13,14 @@ public class MIDIService
     static MIDIService() { }
     private MIDIService()
     {
-        _midiAccess = MidiAccessManager.Default as IMidiAccess2 ?? throw new Exception("Could not find default MIDIAccess");
+        // var client = new MidiClient("MyMIDIClient");
+        // var endpoint = client.CreateVirtualSource("MyVirtualMIDISource", out var statusCode);
 
-         // TODO: THIS NEEDS TO BE SET THROUGH THE UI (and or through a virtual MIDI port) at the moment its sort of hardwired to what ever hardware synth I enable
+        _midiAccess = MidiAccessManager.Default as IMidiAccess2 ?? throw new Exception("Could not find default MIDIAccess");
+        // TODO: THIS NEEDS TO BE SET THROUGH THE UI (and or through a virtual MIDI port) at the moment its sort of hardwired to what ever hardware synth I enable
         _outputDevice = _midiAccess.Outputs.ElementAtOrDefault(1) ?? throw new Exception("No MIDI Device found");
+
+        Console.WriteLine(string.Join(Environment.NewLine, _midiAccess.Outputs.Select(x => x.Name)));
     }
 
     public void SendMidiNoteOn(int note)

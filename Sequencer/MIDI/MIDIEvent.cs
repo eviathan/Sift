@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Sift.Models
+namespace Sift.Sequencer.MIDI
 {
     public class MIDIEvent
     {
