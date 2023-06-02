@@ -1,39 +1,37 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Sift.Sequencer.Nodes;
 
 namespace Sift.Sequencer
 {
     public class Tree
     {
-        public INode StartNode { get; private set; }
-        public INode? PreviousNode { get; private set; }
-        public INode CurrentNode { get; private set; }
+        public INode RootNode { get; private set; }
+        public Queue<INode> ActiveNodes { get; private set; } = new Queue<INode>();
 
-        public Tree(INode startNode)
+        public Tree(INode rootNode)
         {
-            StartNode = startNode;
-            CurrentNode = startNode;
+            RootNode = rootNode;
+            ActiveNodes.Enqueue(rootNode);
         }
 
         public void Traverse()
         {
-            if(CurrentNode == null)
-                return;
-            
-            CurrentNode.DidStart();
-            PreviousNode?.DidEnd();
+            var childNodes = new List<INode>();
+            while(ActiveNodes.TryDequeue(out var activeNode)) 
+            {
+                activeNode.DidStart();
+                activeNode.Parent?.DidEnd();
+                childNodes.AddRange(activeNode.Children);
+            }
 
-            PreviousNode = CurrentNode;
-            CurrentNode = CurrentNode.Next;
+            foreach (var childNode in childNodes)
+            {
+                ActiveNodes.Enqueue(childNode);                
+            }     
         }
 
         public void ResetTree()
         {
-            CurrentNode = StartNode;
-            PreviousNode = default;
+            ActiveNodes = new Queue<INode>(new List<INode> { RootNode });
         }
     }
 }

@@ -8,18 +8,27 @@ namespace Sift.Sequencer.Nodes
 {
     public class MidiEventNode : INode
     {
-        public INode Next { get; set; }
+        public INode? Parent { get; set; }
+        public List<INode> Children { get; set; }
+        public MIDIEvent MIDIEvent { get; set; }
 
-        public MIDIEvent Event { get; set; }
+        public MidiEventNode(MIDIEvent midiEvent, List<INode>? children = null)
+        {
+            MIDIEvent = midiEvent;
+            Children = children ?? new List<INode>();
+
+            foreach (var child in Children)
+                child.Parent = this;
+        }   
 
         void INode.DidStart()
         {
-            MIDIService.Instance.SendMidiNoteOn(Event.Pitch);
+            MIDIService.Instance.SendMidiNoteOn(MIDIEvent.Pitch);
         }
 
         public void DidEnd()
         {
-            MIDIService.Instance.SendMidiNoteOff(Event.Pitch);
+            MIDIService.Instance.SendMidiNoteOff(MIDIEvent.Pitch);
         }
     }
 }

@@ -25,7 +25,7 @@ namespace Sift.Sequencer
             where TTreeNode : INode
         {
             var treeNodeType = typeof(TTreeNode);
-            var newTreeNode = _treeNodePools[treeNodeType].TakeNode<TTreeNode>();
+            var newTreeNode = _treeNodePools[treeNodeType].TakeNode();
 
             if(TreeNodeGrid.TryGetValue((x, y), out var treeNode) && treeNode is PathTreeNode)
             {
@@ -46,7 +46,7 @@ namespace Sift.Sequencer
             if(TreeNodeGrid.TryGetValue((x, y), out var treeNode))
             {
                 var treeNodeType = typeof(TTreeNode);
-                _treeNodePools[treeNodeType].ReturnNode<INode>(treeNode);
+                _treeNodePools[treeNodeType].ReturnNode(treeNode);
             }
 
         }

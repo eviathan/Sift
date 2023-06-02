@@ -7,7 +7,8 @@ namespace Sift.Sequencer.Nodes
 {
     public interface INode
     {
-        INode Next { get; set; }
+        INode? Parent { get; set; }
+        List<INode> Children { get; set; }
 
         void DidEnd();
         void DidStart();

@@ -7,12 +7,12 @@ namespace Sift.Sequencer
 {
     public class Pool<TItem>
     {
-        public TItem TakeNode<TItem>()
+        public TItem TakeNode()
         {
             throw new NotImplementedException();
         }
 
-        public TItem ReturnNode<TItem>(TItem item)
+        public TItem ReturnNode(TItem item)
         {
             throw new NotImplementedException();
         }

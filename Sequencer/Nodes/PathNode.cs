@@ -7,7 +7,8 @@ namespace Sift.Sequencer.Nodes
 {
     public class PathTreeNode : INode
     {
-        public INode Next { get; set; }
+        public INode? Parent { get; set; }
+        public List<INode> Children { get; set; }
 
         public void DidStart() { }
 
