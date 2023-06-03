@@ -18,8 +18,8 @@ namespace Sift.Sequencer
             var childNodes = new List<INode>();
             while(ActiveNodes.TryDequeue(out var activeNode)) 
             {
-                activeNode.DidStart();
                 activeNode.Parent?.DidEnd();
+                activeNode.DidStart();
                 childNodes.AddRange(activeNode.Children);
             }
 

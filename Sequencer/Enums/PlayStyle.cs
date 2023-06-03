@@ -1,4 +1,4 @@
-namespace Sift.Models
+namespace Sift.Sequencer.Enums
 {
     public enum PlayStyle
     {

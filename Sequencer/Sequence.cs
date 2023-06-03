@@ -27,7 +27,7 @@ namespace Sift.Sequencer
             var treeNodeType = typeof(TTreeNode);
             var newTreeNode = _treeNodePools[treeNodeType].TakeNode();
 
-            if(TreeNodeGrid.TryGetValue((x, y), out var treeNode) && treeNode is PathTreeNode)
+            if(TreeNodeGrid.TryGetValue((x, y), out var treeNode) && treeNode is GridNode)
             {
                 TreeNodeGrid.Add((x, y), newTreeNode);
             }

@@ -1,14 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Sift.Sequencer.Enums;
+using Sift.Sequencer.Grid;
 
 namespace Sift.Sequencer.Nodes
 {
     public interface INode
     {
         INode? Parent { get; set; }
-        List<INode> Children { get; set; }
+        List<INode> Children { get; }
+        Position Position { get; }
+        int DistanceFromParent { get; }
 
         void DidEnd();
         void DidStart();
