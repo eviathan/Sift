@@ -11,6 +11,7 @@ public class MIDIService
     private IMidiOutput? _midiOutput { get; set; }
 
     static MIDIService() { }
+    
     private MIDIService()
     {
         // var client = new MidiClient("MyMIDIClient");

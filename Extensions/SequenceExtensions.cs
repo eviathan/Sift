@@ -15,31 +15,31 @@ public static class SequenceExtensions
         var node5 = new MidiEventNode(
             new MIDIEvent { Pitch = 43 + (12 * 3) },
             new Position(4, 0),
-            children: new List<INode> { node6 }            
+            children: new List<Node> { node6 }            
         );
 
         var node4 = new MidiEventNode(
             new MIDIEvent { Pitch = 44 + (12 * 3) },
             new Position(3, 0),
-            children: new List<INode> { node5 }
+            children: new List<Node> { node5 }
         );
 
         var node3 = new MidiEventNode(
             new MIDIEvent { Pitch = 43 + (12 * 3) },
             new Position(3, 0),
-            children: new List<INode> { node4 }
+            children: new List<Node> { node4 }
         );
 
         var node2 = new MidiEventNode(
             new MIDIEvent { Pitch = 39 + (12 * 3) },
             new Position(3, 0),
-            children: new List<INode> { node3 }
+            children: new List<Node> { node3 }
         );
 
         var node1 = new MidiEventNode(
             new MIDIEvent { Pitch = 36 + (12 * 3) },
             new Position(3, 0),
-            children: new List<INode> { node2 }
+            children: new List<Node> { node2 }
         );
 
         node6.Children.Add(node1);

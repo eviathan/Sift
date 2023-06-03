@@ -4,10 +4,10 @@ namespace Sift.Sequencer
 {
     public class Tree
     {
-        public INode RootNode { get; private set; }
-        public Queue<INode> ActiveNodes { get; private set; } = new Queue<INode>();
+        public Node RootNode { get; private set; }
+        public Queue<Node> ActiveNodes { get; private set; } = new Queue<Node>();
 
-        public Tree(INode rootNode)
+        public Tree(Node rootNode)
         {
             RootNode = rootNode;
             ActiveNodes.Enqueue(rootNode);
@@ -15,7 +15,7 @@ namespace Sift.Sequencer
 
         public void Traverse()
         {
-            var childNodes = new List<INode>();
+            var childNodes = new List<Node>();
             while(ActiveNodes.TryDequeue(out var activeNode)) 
             {
                 activeNode.Parent?.DidEnd();
@@ -31,7 +31,7 @@ namespace Sift.Sequencer
 
         public void ResetTree()
         {
-            ActiveNodes = new Queue<INode>(new List<INode> { RootNode });
+            ActiveNodes = new Queue<Node>(new List<Node> { RootNode });
         }
     }
 }

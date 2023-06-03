@@ -3,16 +3,16 @@ using Sift.Sequencer.MIDI;
 
 namespace Sift.Sequencer.Nodes
 {
-    public class MidiEventNode : GridNode
+    public class MidiEventNode : Node
     {
         public MIDIEvent MIDIEvent { get; set; }
 
         public MidiEventNode(
             MIDIEvent midiEvent,
             Position position,
-            INode? parent = null,
-            List<INode>? children = null)
-                : base(position, parent, children)
+            Node? parent = null,
+            List<Node>? children = null
+        ) : base(position, parent, children)
         {
             MIDIEvent = midiEvent;
         }   

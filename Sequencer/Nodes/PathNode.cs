@@ -7,12 +7,15 @@ using Sift.Sequencer.Grid;
 
 namespace Sift.Sequencer.Nodes
 {
-    public class PathNode : GridNode
+    public class PathNode : Node
     {
-        public Direction Direction { get; set; }
+        // NOTE: I dont think we need direction
+        // public Direction Direction { get; set; }
         
-        public PathNode(Position transform, INode? parent = null, List<INode>? children = null) : base(transform, parent, children)
-        {
-        }
+        public PathNode(
+            Position transform,
+            Node? parent = null,
+            List<Node>? children = null
+        ) : base(transform, parent, children) { }
     }
 }
