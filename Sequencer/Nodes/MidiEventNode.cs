@@ -19,12 +19,19 @@ namespace Sift.Sequencer.Nodes
 
         public override void DidStart()
         {
-            MIDIService.Instance.SendMidiNoteOn(MIDIEvent.Pitch);
+            Console.WriteLine($"Note On: {this}");
+            // MIDIService.Instance.SendMidiNoteOn(MIDIEvent.Pitch);
         }
 
         public override void DidEnd()
         {
-            MIDIService.Instance.SendMidiNoteOff(MIDIEvent.Pitch);
+            Console.WriteLine($"Note Off: {this}");
+            // MIDIService.Instance.SendMidiNoteOff(MIDIEvent.Pitch);
+        }
+
+        public override string ToString()
+        {
+            return $"{MIDIEvent.Pitch} {MIDIEvent.Duration} {MIDIEvent.Velocity}";
         }
     }
 }

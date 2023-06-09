@@ -10,7 +10,10 @@ namespace Sift.Sequencer.Nodes
         public Node? Parent { get; set; }
         public List<Node> Children { get; private set; }
         public Position Position { get; private set; }
-        public int DistanceFromParent { get; private set; }
+        public long DistanceFromParent { get; private set; }
+        public long StartTime { get; private set; }
+        public long Duration { get; private set; } = 500L;
+
 
         public Node(
             Position position,
@@ -30,8 +33,36 @@ namespace Sift.Sequencer.Nodes
                 child.Parent = this;
         }
 
+        public void UpdateTiming(SequencerContext context)
+        {
+            var parentEndTime = Parent != null 
+                ? Parent.StartTime + Parent.Duration
+                : 0L;
+
+            StartTime = parentEndTime + DistanceFromParent;
+        }
+
         public virtual void DidStart() { }
 
         public virtual void DidEnd() { }
+
+        public virtual List<NodeEvent> GetEvents()
+        {
+            return new List<NodeEvent>
+            {
+                new NodeEvent
+                {
+                    Node = this,
+                    Time = StartTime,
+                    Type = NodeEventType.Start
+                },
+                new NodeEvent
+                {
+                    Node = this,
+                    Time = StartTime + Duration,
+                    Type = NodeEventType.End
+                }
+            };
+        }
     }
 }

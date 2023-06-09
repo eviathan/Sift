@@ -1,21 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Diagnostics;
 
 namespace Sift.Sequencer
 {
     public class Sequencer
     {
-        public bool IsPlaying { get; private set; }
-        public DateTime StartTime { get; private set; }
-        public int BeatCount { get; private set; }
-
         private const int BUSY_WAITING_TIMEOUT_IN_MS = 1; 
 
+        public bool IsPlaying { get; private set; }
+        public DateTime StartTime { get; private set; }
         private Sequence _sequence { get; set; }
-
         private Stopwatch _stopwatch { get; set; } = new Stopwatch();
         private Task _sequenceTask;
         private CancellationTokenSource _cancellationTokenSource { get; set; } = new CancellationTokenSource();
@@ -34,7 +27,11 @@ namespace Sift.Sequencer
 
         public void Play()
         {
-            if(IsPlaying) return;
+            if(IsPlaying) 
+            {
+                Stop();
+                return;
+            }
 
             IsPlaying = true;
             StartTime = DateTime.Now;
@@ -46,38 +43,40 @@ namespace Sift.Sequencer
         public void Stop()
         {
             IsPlaying = false;
-            BeatCount = default;
+
             _stopwatch.Reset();
             _sequence.ResetTrees();
+
             MIDIService.Instance.KillAllNotes();
         }
 
         private void ExecuteSequence()
         {
+            var lastUpdateTime = 0L;
+
             while (!_cancellationTokenSource.Token.IsCancellationRequested)
             {
-                var noteHasElapased = _stopwatch.ElapsedMilliseconds >= BeatTimeInMs();
-
-                if (IsPlaying && noteHasElapased)
+                if (IsPlaying)
                 {
                     foreach (var tree in _sequence.Trees)
-                        tree.Traverse();
+                    {
+                        var currentTime = _stopwatch.ElapsedMilliseconds;
 
-                    BeatCount++;
-                    _stopwatch.Restart();
+                        var context = new SequencerContext
+                        {
+                            Time = _stopwatch.ElapsedMilliseconds,
+                            DeltaTime = currentTime - lastUpdateTime,
+                        };
+
+                        tree.Update(context);
+                        lastUpdateTime = currentTime;
+                    }
                 }
                 else
                 {
                     Thread.Sleep(BUSY_WAITING_TIMEOUT_IN_MS);
                 }
             }
-        }
-
-        private double BeatTimeInMs() 
-        {
-            var crotchetBeatLengthInMs = 60000.0 / _sequence.Tempo;
-            double semiquaverLengthInMs = crotchetBeatLengthInMs / 4;
-            return semiquaverLengthInMs;
         }
     }
 }

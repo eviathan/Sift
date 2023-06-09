@@ -19,37 +19,40 @@ namespace Sift.Sequencer
         // TODO: WE WILL PROBABLLY NEED A GRID FOR EACH TYPE OF TREE NODE
         public Dictionary<(int x, int y), Node> Grid = new Dictionary<(int x, int y), Node>();
 
-        private Dictionary<Type, Pool<Node>> _treeNodePools { get; set; } = new Dictionary<Type, Pool<Node>>();
+        #region Node Pool
+        // NOTE: Implement this later
+        // private Dictionary<Type, Pool<Node>> _treeNodePools { get; set; } = new Dictionary<Type, Pool<Node>>();
 
-        public void AddNode<TTreeNode>(int x, int y)
-            where TTreeNode : Node
-        {
-            var treeNodeType = typeof(TTreeNode);
-            var newTreeNode = _treeNodePools[treeNodeType].TakeNode();
+        // public void AddNode<TTreeNode>(int x, int y)
+        //     where TTreeNode : Node
+        // {
+        //     var treeNodeType = typeof(TTreeNode);
+        //     var newTreeNode = _treeNodePools[treeNodeType].TakeNode();
 
-            if(Grid.TryGetValue((x, y), out var treeNode) && treeNode is Node)
-            {
-                Grid.Add((x, y), newTreeNode);
-            }
-            else 
-            {
-                if(!_treeNodePools.ContainsKey(treeNodeType))
-                    _treeNodePools[treeNodeType] = new Pool<Node>();
+        //     if(Grid.TryGetValue((x, y), out var treeNode) && treeNode is Node)
+        //     {
+        //         Grid.Add((x, y), newTreeNode);
+        //     }
+        //     else 
+        //     {
+        //         if(!_treeNodePools.ContainsKey(treeNodeType))
+        //             _treeNodePools[treeNodeType] = new Pool<Node>();
 
-                Grid.Add((x, y), newTreeNode);
-            }
-        }
+        //         Grid.Add((x, y), newTreeNode);
+        //     }
+        // }
 
-        public void RemoveNode<TTreeNode>(int x, int y)
-            where TTreeNode : Node 
-        {
-            if(Grid.TryGetValue((x, y), out var treeNode))
-            {
-                var treeNodeType = typeof(TTreeNode);
-                _treeNodePools[treeNodeType].ReturnNode(treeNode);
-            }
+        // public void RemoveNode<TTreeNode>(int x, int y)
+        //     where TTreeNode : Node 
+        // {
+        //     if(Grid.TryGetValue((x, y), out var treeNode))
+        //     {
+        //         var treeNodeType = typeof(TTreeNode);
+        //         _treeNodePools[treeNodeType].ReturnNode(treeNode);
+        //     }
 
-        }
+        // }
+        #endregion
 
         public void ResetTrees()
         {
