@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace Sift.Sequencer
 {
-    public class Sequencer
+    public class SiftSequencer
     {
         public bool IsPlaying { get; private set; }
         public DateTime StartTime { get; private set; }
@@ -20,7 +20,7 @@ namespace Sift.Sequencer
         private Task _sequenceTask;
         private CancellationTokenSource _cancellationTokenSource { get; set; } = new CancellationTokenSource();
 
-        public Sequencer(Sequence sequence)
+        public SiftSequencer(Sequence sequence)
         {
             _sequence = sequence;
             _sequenceTask = Task.Run(ExecuteSequence, _cancellationTokenSource.Token);
