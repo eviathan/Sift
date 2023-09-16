@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sift", "Sift\Sift.csproj", "{73776DE1-CA3B-4CB2-AECC-DC393F9C7505}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sift.Tests.Unit", "Sift.Tests.Unit\Sift.Tests.Unit.csproj", "{A82188FB-7F14-451A-82AD-284654F40F10}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sift.Sequencer", "Sift.Sequencer\Sift.Sequencer.csproj", "{1D225603-8F64-4BAA-89FB-152D07D50289}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{73776DE1-CA3B-4CB2-AECC-DC393F9C7505}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{73776DE1-CA3B-4CB2-AECC-DC393F9C7505}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{73776DE1-CA3B-4CB2-AECC-DC393F9C7505}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{73776DE1-CA3B-4CB2-AECC-DC393F9C7505}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A82188FB-7F14-451A-82AD-284654F40F10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A82188FB-7F14-451A-82AD-284654F40F10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A82188FB-7F14-451A-82AD-284654F40F10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A82188FB-7F14-451A-82AD-284654F40F10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D225603-8F64-4BAA-89FB-152D07D50289}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D225603-8F64-4BAA-89FB-152D07D50289}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D225603-8F64-4BAA-89FB-152D07D50289}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D225603-8F64-4BAA-89FB-152D07D50289}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

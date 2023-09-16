@@ -6,6 +6,8 @@ public class Program
 
     public static async Task Main()
     {
+        await App.Init();
+
         while(App.IsRunning)
         {
             App.Update();

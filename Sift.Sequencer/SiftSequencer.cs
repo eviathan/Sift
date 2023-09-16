@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using Sift.Sequencer.MIDI;
 
 namespace Sift.Sequencer
 {
@@ -60,6 +61,8 @@ namespace Sift.Sequencer
 
                 if (IsPlaying && noteHasElapased)
                 {
+                    Console.WriteLine("New Frame");
+
                     foreach (var tree in _sequence.Trees)
                         tree.Traverse();
 

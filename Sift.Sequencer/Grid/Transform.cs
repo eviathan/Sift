@@ -7,19 +7,18 @@ namespace Sift.Sequencer.Grid
         public int X { get; set; }
         public int Y { get; set; }
 
-        public int Layer { get; set; }
+        public ushort Layer { get; set; }
 
-        public Position(int x, int y, int layer = default)
+        public Position(int x, int y, ushort layer = default)
         {
             X = x;
             Y = y;
             Layer = layer;
         }
 
-        public int Distance(Position to) 
+        public double Distance(Position to) 
         {
-            // NOTE: If we move to allowing off grid this casting should be removed
-            return (int) Math.Ceiling(Math.Sqrt(Math.Pow(to.X - X, 2) + Math.Pow(to.Y - Y, 2)));
+            return Math.Ceiling(Math.Sqrt(Math.Pow(to.X - X, 2) + Math.Pow(to.Y - Y, 2)));
         }
     }
 }

@@ -7,10 +7,13 @@ namespace Sift.Sequencer.Nodes
     // abstract class as its probably a bit redundant backing it with an interface
     public abstract class Node
     {
+        public bool IsRoot { get; set; }
         public Node? Parent { get; set; }
         public List<Node> Children { get; private set; }
         public Position Position { get; private set; }
-        public int DistanceFromParent { get; private set; }
+
+        public double DistanceFromRoot { get; set; }
+        public double DistanceFromParent { get; set; }
 
         public Node(
             Position position,
