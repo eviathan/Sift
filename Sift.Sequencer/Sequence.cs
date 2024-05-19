@@ -6,42 +6,53 @@ namespace Sift.Sequencer
     public class Sequence
     {
         public ushort Tempo { get; private set; } = 120;
-
-        // NOTES
-        // - We will probably want to keep a cyclic directional tree for the traversal/ sequence 
-        // - we will probably want to keep a dictionary to store the positional data of the nodes
-        // - We will probably want to avoid GC so use a Pool for the TreeNodes
         public List<Tree> Trees { get; set; } = [];
         public Grid<Node> Grid { get; set; } = new();
-        public Pool<NodeWalker> Walkers { get; set; } = new(10)
+        public List<GridWalker> Walkers { get; set; } = new();
 
-        public void AddNode<TTreeNode>(int x, int y, int z)
-            where TTreeNode : Node
+        private Pool<GridWalker> _walkerPool { get; set; } = new(100);
+
+        public void Update(int tick)
         {
-            // var treeNodeType = typeof(TTreeNode);
-            // var newTreeNode = _treeNodePools[treeNodeType].TakeNode();
+            Console.WriteLine($"Tick: {tick}");
 
-            // if (Grid.TryGetValue((x, y, 0), out var treeNode) && treeNode is Node)
-            // {
-            //     Grid.Add((x, y), newTreeNode);
-            // }
-            // else
-            // {
-            //     if (!_treeNodePools.ContainsKey(treeNodeType))
-            //         _treeNodePools[treeNodeType] = new Pool<Node>();
+            // Update Walker Position
+            foreach (var walker in Walkers)
+            {
+                walker.Traverse();
 
-            //     Grid.Add((x, y), newTreeNode);
-            // }
+                // Check to see if there are any Nodes in the Grid on those positions
+                if (Grid.TryGetValue(walker.Position, out var node))
+                {
+                    // If there are Iterate throught the events on the Nodes and Invoke them
+                    foreach (var nodeEvent in node.Events)
+                    {
+                        nodeEvent.Invoke();
+                    }
+
+                    // // If there are any children grab walkers from a pool and set them in motion
+                    // // NOTE THIS PROBABLY NEEDS A BETTER NAME
+                    foreach (var child in node.Children)
+                    {
+                    }
+                }
+            }
         }
 
-        public void RemoveNode<TTreeNode>(int x, int y)
+        public void AddNode(int x, int y, int z, Node node)
+        {
+            // add it to the grid at
+            // We lease out a walker from the pool
+            // add the walker to the sequences list of walkers
+        }
+
+        public void RemoveNode<TTreeNode>(int x, int y, int z)
             where TTreeNode : Node
         {
-            // if (Grid.TryGetValue((x, y), out var treeNode))
-            // {
-            //     var treeNodeType = typeof(TTreeNode);
-            //     _treeNodePools[treeNodeType].ReturnNode(treeNode);
-            // }
+            // remove it from the grid at
+            // release its walker from the pool
+            // remove the walker to the sequences list of walkers
+            throw new NotImplementedException();
         }
 
         public void ResetTrees()

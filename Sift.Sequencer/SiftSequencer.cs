@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Sift.Sequencer.MIDI;
+using Sift.Sequencer.Models;
 
 namespace Sift.Sequencer
 {
@@ -56,11 +57,7 @@ namespace Sift.Sequencer
 
                 if (IsPlaying && noteHasElapased)
                 {
-                    Console.WriteLine($"Tick: {TickCount}");
-
-                    foreach (var tree in _sequence.Trees)
-                        tree.Traverse();
-
+                    _sequence.Update(TickCount);
                     TickCount++;
                     _stopwatch.Restart();
                 }

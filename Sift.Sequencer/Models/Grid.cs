@@ -1,3 +1,5 @@
+using Sift.Sequencer.Grid;
+
 namespace Sift.Sequencer.Models
 {
     public class Grid<TItem>
@@ -24,11 +26,19 @@ namespace Sift.Sequencer.Models
         }
 
         public bool TryGetValue(int x, int y, int z, out TItem value) => _grid.TryGetValue((x, y, z), out value);
+
+        public bool TryGetValue(GridVector position, out TItem value) => _grid.TryGetValue((position.X, position.Y, position.Z), out value);
+
         public bool Contains(int x, int y, int z) => _grid.ContainsKey((x, y, z));
+
         public void Remove(int x, int y, int z) => _grid.Remove((x, y, z));
+
         public void Clear() => _grid.Clear();
+
         public int Count => _grid.Count;
+
         public IEnumerable<(int x, int y, int z)> Keys => _grid.Keys;
+
         public IEnumerable<TItem> Values => _grid.Values;
     }
 }
