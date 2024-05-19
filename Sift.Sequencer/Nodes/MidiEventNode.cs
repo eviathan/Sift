@@ -7,15 +7,11 @@ namespace Sift.Sequencer.Nodes
     {
         public MIDIEvent MIDIEvent { get; set; }
 
-        public MidiEventNode(
-            MIDIEvent midiEvent,
-            Position position,
-            Node? parent = null,
-            List<Node>? children = null
-        ) : base(position, parent, children)
+        public MidiEventNode(MIDIEvent midiEvent, Position position, List<GridVector>? children = null)
+            : base(position, children)
         {
             MIDIEvent = midiEvent;
-        }   
+        }
 
         public override void DidStart()
         {
