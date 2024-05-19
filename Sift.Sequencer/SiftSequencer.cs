@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using Sift.Sequencer.MIDI;
-using Sift.Sequencer.Models;
 
 namespace Sift.Sequencer
 {

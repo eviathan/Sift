@@ -1,4 +1,6 @@
 
+using Sift.Sequencer.Grid;
+
 namespace Sift.Sequencer.Models
 {
     public class Pool<T> where T : new()
@@ -21,7 +23,8 @@ namespace Sift.Sequencer.Models
         public bool TryLeaseItems(out List<T> items, int amount = 1, bool createNewIfEmpty = false, Action<T> prepareItem = null)
         {
             items = new List<T>();
-            return false;
+
+            return true;
         }
     }
 }

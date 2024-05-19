@@ -2,6 +2,7 @@ using Sift.Logging;
 using Sift.Sequencer;
 using Sift.Services;
 using Sift.Sequencer.MIDI;
+using Sift.Sequencer.Extensions;
 
 namespace Sift
 {
@@ -15,7 +16,7 @@ namespace Sift
 
         public App()
         {
-            Sequence = new Sequence();
+            Sequence = new Sequence().Basic();
             Sequencer = new SiftSequencer(Sequence);
             KeyEventService = new KeyEventService(Sequencer);
         }

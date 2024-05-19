@@ -1,3 +1,4 @@
+using Sift.Sequencer.Grid;
 using Sift.Sequencer.Models;
 using Sift.Sequencer.Nodes;
 
@@ -8,26 +9,29 @@ namespace Sift.Sequencer
         public ushort Tempo { get; private set; } = 120;
         public List<Tree> Trees { get; set; } = [];
         public Grid<Node> Grid { get; set; } = new();
-        public List<GridWalker> Walkers { get; set; } = new();
+        public List<GridWalker> Walkers { get; set; } = [
+            new GridWalker(
+                    new GridVector(1, 0, 0),
+                    new GridVector(0, 0, 0)
+                )
+        ];
 
         private Pool<GridWalker> _walkerPool { get; set; } = new(100);
 
         public void Update(int tick)
         {
-            Console.WriteLine($"Tick: {tick}");
+            // Console.WriteLine($"Tick: {tick}");
 
             // Update Walker Position
             foreach (var walker in Walkers)
             {
-                walker.Traverse();
-
                 // Check to see if there are any Nodes in the Grid on those positions
                 if (Grid.TryGetValue(walker.Position, out var node))
                 {
                     // If there are Iterate throught the events on the Nodes and Invoke them
                     foreach (var nodeEvent in node.Events)
                     {
-                        nodeEvent.Invoke();
+                        nodeEvent.Invoke(node);
                     }
 
                     // // If there are any children grab walkers from a pool and set them in motion
@@ -36,14 +40,26 @@ namespace Sift.Sequencer
                     {
                     }
                 }
+
+                walker.Traverse();
             }
         }
 
         public void AddNode(int x, int y, int z, Node node)
         {
+            if (node == null)
+                throw new ArgumentNullException("Cannot add a null node to the Grid!");
+
             // add it to the grid at
+            Grid[x, y, z] = node;
+
             // We lease out a walker from the pool
-            // add the walker to the sequences list of walkers
+            // if (_walkerPool.TryLeaseItems(out var walkers))
+            // {
+            //     var walker = walkers.First();
+            //     // add the walker to the sequences list of walkers
+            //     Walkers.Add(walker);
+            // }
         }
 
         public void RemoveNode<TTreeNode>(int x, int y, int z)
