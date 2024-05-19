@@ -1,7 +1,6 @@
 using Sift.Logging;
 using Sift.Sequencer;
 using Sift.Services;
-using Sift.Sequencer.Extensions;
 using Sift.Sequencer.MIDI;
 
 namespace Sift
@@ -16,8 +15,8 @@ namespace Sift
 
         public App()
         {
-            Sequence = new Sequence().Basic(); // NOTE: This basic call just sets up a test sequence
-            Sequencer = new Sequencer.SiftSequencer(Sequence);
+            Sequence = new Sequence();
+            Sequencer = new SiftSequencer(Sequence);
             KeyEventService = new KeyEventService(Sequencer);
         }
 
@@ -37,14 +36,16 @@ namespace Sift
 
         private void RegisterKeyEvents()
         {
-            KeyEventService.RegisterKeyEvent(ConsoleKey.Spacebar, () => {
-                if(Sequencer.IsPlaying)
+            KeyEventService.RegisterKeyEvent(ConsoleKey.Spacebar, () =>
+            {
+                if (Sequencer.IsPlaying)
                     Sequencer.Stop();
                 else
                     Sequencer.Play();
             });
 
-            KeyEventService.RegisterKeyEvent(ConsoleKey.Q, () => {
+            KeyEventService.RegisterKeyEvent(ConsoleKey.Q, () =>
+            {
                 Console.WriteLine("Quitting the application...");
                 MIDIService.Instance.KillAllNotes();
                 IsRunning = false;
