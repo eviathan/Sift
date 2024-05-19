@@ -1,3 +1,4 @@
+using Sift.Sequencer.Grid;
 using Sift.Sequencer.Nodes;
 
 namespace Sift.Sequencer
@@ -15,17 +16,11 @@ namespace Sift.Sequencer
 
         public void Traverse()
         {
-            var childNodes = new List<Node>();
             while (ActiveNodes.TryDequeue(out var activeNode))
             {
                 // activeNode.Parent?.DidEnd();
                 // activeNode.DidStart();
                 // childNodes.AddRange(activeNode.Children);
-            }
-
-            foreach (var childNode in childNodes)
-            {
-                ActiveNodes.Enqueue(childNode);
             }
         }
 

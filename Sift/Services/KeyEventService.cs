@@ -3,8 +3,7 @@ namespace Sift.Services
     public class KeyEventService
     {
         private readonly Sequencer.SiftSequencer _sequencer;
-
-        private Dictionary<ConsoleKey, Action> _keyEvents { get; set; } = new Dictionary<ConsoleKey, Action>();
+        private Dictionary<ConsoleKey, Action> _keyEvents { get; set; } = [];
 
         public KeyEventService(Sequencer.SiftSequencer sequencer)
         {
@@ -16,11 +15,8 @@ namespace Sift.Services
             if (Console.KeyAvailable)
             {
                 var key = Console.ReadKey(true).Key;
-
-                if(_keyEvents.TryGetValue(key, out var action))
-                {
+                if (_keyEvents.TryGetValue(key, out var action))
                     action();
-                }
             }
         }
 

@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Diagnostics;
 using Sift.Sequencer.MIDI;
 
@@ -11,15 +7,14 @@ namespace Sift.Sequencer
     {
         public bool IsPlaying { get; private set; }
         public DateTime StartTime { get; private set; }
-        public int BeatCount { get; private set; }
+        public int TickCount { get; private set; }
 
-        private const int BUSY_WAITING_TIMEOUT_IN_MS = 1; 
+        private const int BUSY_WAITING_TIMEOUT_IN_MS = 1;
 
         private Sequence _sequence { get; set; }
-
-        private Stopwatch _stopwatch { get; set; } = new Stopwatch();
+        private Stopwatch _stopwatch { get; set; } = new();
         private Task _sequenceTask;
-        private CancellationTokenSource _cancellationTokenSource { get; set; } = new CancellationTokenSource();
+        private CancellationTokenSource _cancellationTokenSource { get; set; } = new();
 
         public SiftSequencer(Sequence sequence)
         {
@@ -35,11 +30,11 @@ namespace Sift.Sequencer
 
         public void Play()
         {
-            if(IsPlaying) return;
+            if (IsPlaying) return;
 
             IsPlaying = true;
             StartTime = DateTime.Now;
-            
+
             _stopwatch.Reset();
             _stopwatch.Start();
         }
@@ -47,7 +42,7 @@ namespace Sift.Sequencer
         public void Stop()
         {
             IsPlaying = false;
-            BeatCount = default;
+            TickCount = default;
             _stopwatch.Reset();
             _sequence.ResetTrees();
             MIDIService.Instance.KillAllNotes();
@@ -61,12 +56,12 @@ namespace Sift.Sequencer
 
                 if (IsPlaying && noteHasElapased)
                 {
-                    Console.WriteLine("New Frame");
+                    Console.WriteLine($"Tick: {TickCount}");
 
                     foreach (var tree in _sequence.Trees)
                         tree.Traverse();
 
-                    BeatCount++;
+                    TickCount++;
                     _stopwatch.Restart();
                 }
                 else
@@ -76,7 +71,7 @@ namespace Sift.Sequencer
             }
         }
 
-        private double BeatTimeInMs() 
+        private double BeatTimeInMs()
         {
             var crotchetBeatLengthInMs = 60000.0 / _sequence.Tempo;
             double semiquaverLengthInMs = crotchetBeatLengthInMs / 4;
