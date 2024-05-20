@@ -1,13 +1,13 @@
 using Sift.Sequencer.Interfaces;
-using Sift.Sequencer.Nodes;
+using Sift.Sequencer.Models.Nodes;
 
 namespace Sift.Sequencer.NodeEvents
 {
     public class LogNodeEvent : INodeEvent
     {
-        public void Invoke(Node node)
+        public void Invoke(NodeEventArgs e)
         {
-            Console.WriteLine($"{node.Position.X}_{node.Position.Y}_{node.Position.Z}");
+            Console.WriteLine($"{e.Node.Position.X}_{e.Node.Position.Y}_{e.Node.Position.Z}");
         }
     }
 }

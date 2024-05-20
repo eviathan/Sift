@@ -44,7 +44,7 @@ namespace Sift.Sequencer
             IsPlaying = false;
             TickCount = default;
             _stopwatch.Reset();
-            _sequence.ResetTrees();
+            _sequence.ResetWalker();
             MIDIService.Instance.KillAllNotes();
         }
 

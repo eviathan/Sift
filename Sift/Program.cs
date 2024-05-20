@@ -2,13 +2,14 @@
 
 public class Program
 {
-    public static App App = new App();
+    public static App App;
 
-    public static async Task Main()
+    public static async Task Main(string[] args)
     {
+        App = new App(args);
         await App.Init();
 
-        while(App.IsRunning)
+        while (App.IsRunning)
         {
             App.Update();
         }

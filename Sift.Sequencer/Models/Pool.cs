@@ -1,30 +1,39 @@
 
-using Sift.Sequencer.Grid;
+using System.Collections.Concurrent;
 
+// TODO: Add method which tries to get the item and if there are non in the pool it extends the size of the pool
 namespace Sift.Sequencer.Models
 {
-    public class Pool<T> where T : new()
+    public class Pool<T> where T : class, IDisposable
     {
-        private Queue<T> _pool { get; set; } = [];
+        private readonly ConcurrentBag<T> _objects;
+        private readonly Func<Pool<T>, T> _objectGenerator;
 
-        public Pool(int size)
+        public Pool(Func<Pool<T>, T> objectGenerator, int initialCapacity)
         {
-            for (int i = 0; i < size; i++)
-            {
-                _pool.Enqueue(new T());
-            }
+            _objects = new ConcurrentBag<T>();
+            _objectGenerator = objectGenerator ?? throw new ArgumentNullException(nameof(objectGenerator));
+
+            for (int i = 0; i < initialCapacity; i++)
+                _objects.Add(_objectGenerator(this));
         }
 
-        public T LeaseItemOrDefault()
+        public T Get()
         {
-            throw new NotImplementedException();
+            if (_objects.TryTake(out T item))
+                return item;
+
+            return _objectGenerator(this);
         }
 
-        public bool TryLeaseItems(out List<T> items, int amount = 1, bool createNewIfEmpty = false, Action<T> prepareItem = null)
+        public bool TryGet(out T item)
         {
-            items = new List<T>();
+            return _objects.TryTake(out item!);
+        }
 
-            return true;
+        public void Return(T item)
+        {
+            _objects.Add(item);
         }
     }
 }

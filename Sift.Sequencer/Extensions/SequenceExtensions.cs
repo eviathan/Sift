@@ -13,13 +13,13 @@ namespace Sift.Sequencer.Extensions
     {
         public static Sequence Basic(this Sequence sequence)
         {
-            sequence.AddNode(0, 0, 0, new TestNode(new GridVector(0, 0, 0)));
+            sequence.AddNode(new TestNode(new Vector3D(0, 0, 0), isRoot: true));
 
-            sequence.AddNode(4, 0, 0, new TestNode(new GridVector(4, 0, 0)));
+            sequence.AddNode(new TestNode(new Vector3D(4, 0, 0)));
 
-            sequence.AddNode(5, 0, 0, new TestNode(new GridVector(5, 0, 0)));
+            sequence.AddNode(new TestNode(new Vector3D(5, 0, 0)));
 
-            sequence.AddNode(8, 0, 0, new TestNode(new GridVector(8, 0, 0)));
+            sequence.AddNode(new TestNode(new Vector3D(8, 0, 0)));
 
             return sequence;
         }

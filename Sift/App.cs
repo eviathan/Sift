@@ -9,13 +9,15 @@ namespace Sift
     public class App
     {
         public bool IsRunning = true;
-
         public readonly Sequence Sequence;
         public readonly SiftSequencer Sequencer;
         public readonly KeyEventService KeyEventService;
+        public readonly bool IsDebug;
 
-        public App()
+        public App(string[] args)
         {
+            IsDebug = args.Contains("--vscode");
+
             Sequence = new Sequence().Basic();
             Sequencer = new SiftSequencer(Sequence);
             KeyEventService = new KeyEventService(Sequencer);
