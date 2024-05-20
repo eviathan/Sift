@@ -1,6 +1,6 @@
 namespace Sift.Sequencer.Grid
 {
-    public struct Vector3D
+    public struct Vector3D : IEquatable<Vector3D>
     {
         public int X { get; set; }
         public int Y { get; set; }
@@ -15,6 +15,25 @@ namespace Sift.Sequencer.Grid
 
         public void Modify(int? x = null, int? y = null, int? z = null) =>
             (X, Y, Z) = (x ?? X, y ?? Y, z ?? Z);
+
+        public bool Equals(Vector3D other) =>
+            X == other.X &&
+            Y == other.Y &&
+            Z == other.Z;
+
+        public override int GetHashCode()
+        {
+            int hashCode = 17;
+            hashCode = hashCode * 31 + X.GetHashCode();
+            hashCode = hashCode * 31 + Y.GetHashCode();
+            hashCode = hashCode * 31 + Z.GetHashCode();
+            return hashCode;
+        }
+
+        public override string ToString()
+        {
+            return $"({X}, {Y}, {Z})";
+        }
 
         public static Vector3D operator +(Vector3D a, Vector3D b) =>
             new Vector3D(a.X + b.X, a.Y + b.Y, a.Z + b.Z);

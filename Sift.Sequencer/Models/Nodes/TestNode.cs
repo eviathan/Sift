@@ -6,7 +6,7 @@ namespace Sift.Sequencer.Models.Nodes
 {
     public class TestNode : Node
     {
-        public TestNode(Vector3D position, bool isRoot = false) : base(position, isRoot: isRoot)
+        public TestNode(Vector3D position, bool emitOnPlay = false) : base(position, emitOnPlay: emitOnPlay)
         {
             Events = [new LogNodeEvent()];
         }

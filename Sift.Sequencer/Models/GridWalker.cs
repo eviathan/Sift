@@ -33,7 +33,7 @@ namespace Sift.Sequencer.Models
             Position += _startingPosition * tick;
         }
 
-        public void Set(Vector3D direction, Vector3D startingPosition)
+        public void Set(Vector3D startingPosition, Vector3D direction)
         {
             _startingPosition = startingPosition;
             _direction = direction;

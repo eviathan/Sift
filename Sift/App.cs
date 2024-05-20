@@ -18,7 +18,7 @@ namespace Sift
         {
             IsDebug = args.Contains("--vscode");
 
-            Sequence = new Sequence().Basic();
+            Sequence = new Sequence();
             Sequencer = new SiftSequencer(Sequence);
             KeyEventService = new KeyEventService(Sequencer);
         }
@@ -42,9 +42,15 @@ namespace Sift
             KeyEventService.RegisterKeyEvent(ConsoleKey.Spacebar, () =>
             {
                 if (Sequencer.IsPlaying)
+                {
+                    Sequence.Deinitialise();
                     Sequencer.Stop();
+                }
                 else
+                {
+                    Sequence.Initialise();
                     Sequencer.Play();
+                }
             });
 
             KeyEventService.RegisterKeyEvent(ConsoleKey.Q, () =>

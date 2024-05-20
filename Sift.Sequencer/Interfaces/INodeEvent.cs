@@ -5,7 +5,6 @@ namespace Sift.Sequencer.Interfaces
 {
     public interface INodeEvent
     {
-        // I should pass in the Grid, Walker, Sequence etc in the Event
         void Invoke(NodeEventArgs e);
     }
 }
