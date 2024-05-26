@@ -1,28 +1,41 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Sift.Logging;
+using Sift.Sequencer;
 using Sift.UI.ViewModels;
 using Sift.UI.Views;
 
-namespace Sift.UI;
-
-public partial class App : Application
+namespace Sift.UI
 {
-    public override void Initialize()
+    // TODO: Add MIDI Service initialisation
+    public partial class App : Application
     {
-        AvaloniaXamlLoader.Load(this);
-    }
+        public bool IsRunning = true;
+        public Sequence Sequence { get; private set; }
+        public SiftSequencer Sequencer { get; private set; }
 
-    public override void OnFrameworkInitializationCompleted()
-    {
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        public override void Initialize()
         {
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = new MainWindowViewModel(),
-            };
+            Logger.WriteBanner("Sift v0.0.1");
+
+            Sequence = new Sequence();
+            Sequencer = new SiftSequencer(Sequence);
+
+            AvaloniaXamlLoader.Load(this);
         }
 
-        base.OnFrameworkInitializationCompleted();
+        public override void OnFrameworkInitializationCompleted()
+        {
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                desktop.MainWindow = new MainWindow
+                {
+                    DataContext = new MainWindowViewModel(),
+                };
+            }
+
+            base.OnFrameworkInitializationCompleted();
+        }
     }
 }

@@ -2,9 +2,8 @@ using Sift.Logging;
 using Sift.Sequencer;
 using Sift.Services;
 using Sift.Sequencer.MIDI;
-using Sift.Sequencer.Extensions;
 
-namespace Sift
+namespace Sift.CLI
 {
     public class App
     {
@@ -12,24 +11,24 @@ namespace Sift
         public readonly Sequence Sequence;
         public readonly SiftSequencer Sequencer;
         public readonly KeyEventService KeyEventService;
-        public readonly bool IsDebug;
 
-        public App(string[] args)
+        public App()
         {
-            IsDebug = args.Contains("--vscode");
-
             Sequence = new Sequence();
             Sequencer = new SiftSequencer(Sequence);
+
             KeyEventService = new KeyEventService(Sequencer);
         }
 
         public async Task Init()
         {
             Logger.WriteBanner("Sift v0.0.1");
-            Console.WriteLine("Press 'Q' to quit, 'Spacebar' to start/stop the sequence.");
+            Console.WriteLine("Press 'Q' to quit, do'Spacebar' to start/stop the sequence.");
 
             RegisterKeyEvents();
-            await MIDIService.Instance.OpenOutput();
+
+            // TODO: Add this back when working with MIDI
+            // await MIDIService.Instance.OpenOutput();
         }
 
         public void Update()

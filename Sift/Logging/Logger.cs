@@ -9,7 +9,7 @@ namespace Sift.Logging
     {
         private const string LINE = "--------------------------------\n";
 
-        internal static void WriteBanner(string message)
+        public static void WriteBanner(string message)
         {
             Console.WriteLine(LINE);
             Console.WriteLine(message);
