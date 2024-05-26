@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace Sift.App.Views;
+namespace Sift.UI.Views;
 
 public partial class MainWindow : Window
 {

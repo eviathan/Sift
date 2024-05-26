@@ -2,7 +2,7 @@
 using Avalonia.ReactiveUI;
 using System;
 
-namespace Sift.App;
+namespace Sift.UI;
 
 sealed class Program
 {

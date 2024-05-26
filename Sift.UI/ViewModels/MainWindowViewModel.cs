@@ -1,4 +1,4 @@
-﻿namespace Sift.App.ViewModels;
+﻿namespace Sift.UI.ViewModels;
 
 public class MainWindowViewModel : ViewModelBase
 {

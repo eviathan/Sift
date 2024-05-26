@@ -5,17 +5,38 @@
             // Use IntelliSense to find out which attributes exist for C# debugging
             // Use hover for the description of the existing attributes
             // For further information visit https://github.com/dotnet/vscode-csharp/blob/main/debugger-launchjson.md
-            "name": ".NET Core Launch (console)",
+            "name": "Sift CLI",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/Sift/bin/Debug/net7.0/Sift.dll",
+            "program": "${workspaceFolder}/Sift.CLI/bin/Debug/net8.0/Sift.CLI.dll",
             "args": ["--vscode"],
             "cwd": "${workspaceFolder}/Sift",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
             "stopAtEntry": false
+        },
+        {
+            "name": "Launch Sift.UI",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Sift.UI/bin/Debug/net8.0/Sift.UI.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+              "action": "openExternally",
+              "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            },
+            "env": {
+              "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "sourceFileMap": {
+              "/Views": "${workspaceFolder}/Views",
+              "/ViewModels": "${workspaceFolder}/ViewModels"
+            }
         },
         {
             "name": ".NET Core Attach",

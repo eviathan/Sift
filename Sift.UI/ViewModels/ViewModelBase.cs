@@ -1,6 +1,6 @@
 ﻿using ReactiveUI;
 
-namespace Sift.App.ViewModels;
+namespace Sift.UI.ViewModels;
 
 public class ViewModelBase : ReactiveObject
 {

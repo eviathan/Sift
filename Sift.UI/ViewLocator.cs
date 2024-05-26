@@ -1,9 +1,9 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
-using Sift.App.ViewModels;
+using Sift.UI.ViewModels;
 
-namespace Sift.App;
+namespace Sift.UI;
 
 public class ViewLocator : IDataTemplate
 {

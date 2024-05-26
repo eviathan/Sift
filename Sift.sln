@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sift", "Sift\Sift.csproj", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sift.Sequencer", "Sift.Sequencer\Sift.Sequencer.csproj", "{1D225603-8F64-4BAA-89FB-152D07D50289}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sift.UI", "Sift.UI\Sift.UI.csproj", "{323F2E46-9057-4918-A8D3-B028E192EF2C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sift.CLI", "Sift.CLI\Sift.CLI.csproj", "{D25FDCDC-905F-4682-A978-BE8ECA3CDE78}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +28,13 @@ Global
 		{1D225603-8F64-4BAA-89FB-152D07D50289}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1D225603-8F64-4BAA-89FB-152D07D50289}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1D225603-8F64-4BAA-89FB-152D07D50289}.Release|Any CPU.Build.0 = Release|Any CPU
+		{323F2E46-9057-4918-A8D3-B028E192EF2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{323F2E46-9057-4918-A8D3-B028E192EF2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{323F2E46-9057-4918-A8D3-B028E192EF2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{323F2E46-9057-4918-A8D3-B028E192EF2C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D25FDCDC-905F-4682-A978-BE8ECA3CDE78}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D25FDCDC-905F-4682-A978-BE8ECA3CDE78}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D25FDCDC-905F-4682-A978-BE8ECA3CDE78}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D25FDCDC-905F-4682-A978-BE8ECA3CDE78}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

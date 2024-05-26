@@ -1,10 +1,10 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Sift.App.ViewModels;
-using Sift.App.Views;
+using Sift.UI.ViewModels;
+using Sift.UI.Views;
 
-namespace Sift.App;
+namespace Sift.UI;
 
 public partial class App : Application
 {
