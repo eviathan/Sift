@@ -39,7 +39,7 @@
             }
         },
         {
-            "name": ".NET Core Attach",
+            "name": "Attach To Process",
             "type": "coreclr",
             "request": "attach"
         }

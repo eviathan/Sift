@@ -1,41 +1,26 @@
-using System;
 using Avalonia.Controls;
 using Avalonia.Input;
 
-namespace Sift.UI.Views;
-
-public partial class MainWindow : Window
+namespace Sift.UI.Views
 {
-    public MainWindow()
+    public partial class MainWindow : Window
     {
-        InitializeComponent();
-    }
+        private readonly App _app;
 
-    private void OnKeyDown(object sender, KeyEventArgs e)
-    {
-    }
-
-    private void OnKeyUp(object sender, KeyEventArgs e)
-    {
-        // Handle key up event
-        if (e.Key == Key.Space)
+        public MainWindow()
         {
-            // Do something when 'A' key is pressed
-            Console.WriteLine("Spacebar hit");
-            var app = Avalonia.Application.Current as App;
-            var sequence = app.Sequence;
-            var sequencer = app.Sequencer;
+            InitializeComponent();
+            _app = Avalonia.Application.Current as App;
+        }
 
-            if (sequencer.IsPlaying)
-            {
-                sequence.Deinitialise();
-                sequencer.Stop();
-            }
-            else
-            {
-                sequence.Initialise();
-                sequencer.Play();
-            }
+        private void OnKeyDown(object sender, KeyEventArgs e)
+        {
+            _app.KeyEventService.OnKeyDown(e.Key);
+        }
+
+        private void OnKeyUp(object sender, KeyEventArgs e)
+        {
+            _app.KeyEventService.OnKeyUp(e.Key);
         }
     }
 }
