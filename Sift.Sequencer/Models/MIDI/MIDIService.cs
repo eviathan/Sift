@@ -63,10 +63,11 @@ namespace Sift.Sequencer.MIDI
 
         public void KillAllNotes()
         {
-        }
-
-        public async Task OpenOutput()
-        {
+            // for (int i = 0; i < 127; i++)
+            // {
+            //     var noteOffEvent = new NoteOffEvent((SevenBitNumber)i, (SevenBitNumber)0);
+            //     _outputDevice.SendEvent(noteOffEvent);
+            // }
         }
     }
 }

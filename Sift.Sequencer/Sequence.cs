@@ -54,6 +54,21 @@ namespace Sift.Sequencer
             {
                 Events = [
                     new MIDINodeEvent(),
+                    new EmitNodeEvent(new Dictionary<Vector3D, int?>
+                    {
+                        { new Vector3D(-1, 0, 0), 1 },
+                    }),
+                    new LogNodeEvent()
+                ]
+            };
+
+            var yetAnotherNode = new TestNode(new Vector3D(0, 4, 0))
+            {
+                Events = [
+                    new EmitNodeEvent(new Dictionary<Vector3D, int?>
+                    {
+                        { new Vector3D(0, -1, 0), 1 },
+                    }),
                     new LogNodeEvent()
                 ]
             };
@@ -61,6 +76,7 @@ namespace Sift.Sequencer
             AddNode(originNode);
             AddNode(nextNode);
             AddNode(anotherNode);
+            AddNode(yetAnotherNode);
         }
 
         public void Deinitialise()
@@ -141,11 +157,10 @@ namespace Sift.Sequencer
             where TTreeNode : Node
         {
             // remove it from the grid at
-            Grid.Remove(x, y, z);
-
             // release its walker from the pool
             // remove the walker to the sequences list of walkers
             // throw new NotImplementedException();
+            Grid.Remove(x, y, z);
         }
 
         public void ResetWalker()
