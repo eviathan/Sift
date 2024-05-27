@@ -17,8 +17,10 @@ namespace Sift.Sequencer.NodeEvents
         {
             foreach (var direction in _directions)
             {
+                Console.WriteLine($"Emit: Node:({e.Node.Position})_Direction:({direction})");
+
                 var vector = direction.Key * (direction.Value ?? 1);
-                e.Sequence.DispatchWalker(e.Node, vector);
+                e.Sequence.EnqueueWalker(e.Node, vector);
             }
         }
     }

@@ -7,7 +7,7 @@ namespace Sift.Sequencer.NodeEvents
     {
         public void Invoke(NodeEventArgs e)
         {
-            Console.WriteLine($"{e.Node.Position.X}_{e.Node.Position.Y}_{e.Node.Position.Z}");
+            Console.WriteLine($"LogNodeEvent Invocation: {e.Node.Position.X}_{e.Node.Position.Y}_{e.Node.Position.Z}");
         }
     }
 }

@@ -14,7 +14,9 @@ namespace Sift.Sequencer
 
         private GridWalkerPool _walkerPool { get; set; }
         private List<GridWalker> _activeWalkers { get; set; } = [];
+        private List<(Node Node, Vector3D Direction)> _queuedWalkers { get; set; } = [];
         private NodeEventArgs _eventArgs { get; set; } = new();
+
 
         public Sequence()
         {
@@ -38,13 +40,18 @@ namespace Sift.Sequencer
                ]
             };
 
+            var nextNode = new TestNode(new Vector3D(4, 0, 0))
+            {
+                Events = [
+                    new LogNodeEvent()
+                ]
+            };
+
             AddNode(originNode);
-            AddNode(new TestNode(new Vector3D(4, 0, 0)));
-            AddNode(new TestNode(new Vector3D(5, 0, 0)));
+            AddNode(nextNode);
             #endregion
 
             // Get all active invoke on play nodes and create walkers for them
-
         }
 
         public void Deinitialise()
@@ -56,24 +63,61 @@ namespace Sift.Sequencer
         {
             Console.WriteLine($"Tick: {tick}");
 
+            if (tick == 0)
+            {
+                var initialNodes = Grid.Values.Where(x => x.EmitOnPlay && x.IsActive).ToList();
+                foreach (var node in initialNodes)
+                {
+                    _eventArgs.Node = node;
+
+                    foreach (var e in node.Events)
+                        e.Invoke(_eventArgs);
+                }
+            }
+            else
+            {
+                TraverseWalkers();
+            }
+
+            ActivateWalkers();
+        }
+
+        private void ActivateWalkers()
+        {
+            foreach (var queuedWalker in _queuedWalkers)
+            {
+                if (_walkerPool.TryGet(out var walker))
+                {
+                    walker.Set(queuedWalker.Node.Position, queuedWalker.Direction);
+                    _activeWalkers.Add(walker);
+                }
+            }
+            _queuedWalkers.Clear();
+        }
+
+        private void TraverseWalkers()
+        {
             foreach (var walker in _activeWalkers)
             {
-                if (Grid.TryGetValue(walker.Position, out var node))
+                walker.Traverse();
+
+                if (Grid.TryGetNode(walker.Position, out var node))
                 {
                     _eventArgs.Node = node;
 
                     node.DidStart(_eventArgs);
 
                     foreach (var nodeEvent in node.Events)
-                    {
                         nodeEvent.Invoke(_eventArgs);
-                    }
 
                     node.DidEnd(_eventArgs);
                 }
-
-                walker.Traverse();
             }
+        }
+
+        public void EnqueueWalker(Node node, Vector3D direction)
+        {
+            _queuedWalkers.Add((Node: node, Direction: direction));
         }
 
         public void AddNode(Node node)
@@ -92,16 +136,7 @@ namespace Sift.Sequencer
 
             // release its walker from the pool
             // remove the walker to the sequences list of walkers
-            throw new NotImplementedException();
-        }
-
-        public void DispatchWalker(Node node, Vector3D direction)
-        {
-            if (_walkerPool.TryGet(out var walker))
-            {
-                walker.Set(node.Position, direction);
-                _activeWalkers.Add(walker);
-            }
+            // throw new NotImplementedException();
         }
 
         public void ResetWalker()

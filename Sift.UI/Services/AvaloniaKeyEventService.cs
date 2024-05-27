@@ -9,8 +9,7 @@ namespace Sift.UI.Interfaces
     public class AvaloniaKeyEventService : IKeyEventService<Key>
     {
         public Dictionary<Key, Action> KeyEvents { get; set; } = [];
-
-        private readonly SiftSequencer _sequencer;
+        private SiftSequencer _sequencer { get; set; }
         private HashSet<Key> _currentKeyEvents { get; set; } = [];
 
         public AvaloniaKeyEventService(SiftSequencer sequencer)

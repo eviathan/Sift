@@ -27,7 +27,7 @@ namespace Sift.Sequencer.Models
 
         public bool TryGetValue(int x, int y, int z, out TItem value) => _grid.TryGetValue((x, y, z), out value);
 
-        public bool TryGetValue(Vector3D position, out TItem value) => _grid.TryGetValue((position.X, position.Y, position.Z), out value);
+        public bool TryGetNode(Vector3D position, out TItem value) => _grid.TryGetValue((position.X, position.Y, position.Z), out value);
 
         public bool Contains(int x, int y, int z) => _grid.ContainsKey((x, y, z));
 
