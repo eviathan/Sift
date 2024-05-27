@@ -6,7 +6,6 @@ using Sift.Sequencer.Nodes;
 
 namespace Sift.Sequencer
 {
-    // TODO: We need to figure out how to deal with the inital EmitOnPlay events
     public class Sequence
     {
         public ushort Tempo { get; private set; } = 120;
@@ -26,7 +25,6 @@ namespace Sift.Sequencer
 
         public void Initialise()
         {
-            #region Test Data
             var originNode = new TestNode(
                position: new Vector3D(0, 0, 0),
                emitOnPlay: true
@@ -36,22 +34,33 @@ namespace Sift.Sequencer
                    new EmitNodeEvent(new Dictionary<Vector3D, int?>
                     {
                         { new Vector3D(1, 0, 0), 1 },
-                    })
+                    }),
+                    new LogNodeEvent()
                ]
             };
 
             var nextNode = new TestNode(new Vector3D(4, 0, 0))
             {
                 Events = [
+                    new EmitNodeEvent(new Dictionary<Vector3D, int?>
+                    {
+                        { new Vector3D(0, 1, 0), 1 },
+                    }),
+                    new LogNodeEvent()
+                ]
+            };
+
+            var anotherNode = new TestNode(new Vector3D(4, 4, 0))
+            {
+                Events = [
+                    new MIDINodeEvent(),
                     new LogNodeEvent()
                 ]
             };
 
             AddNode(originNode);
             AddNode(nextNode);
-            #endregion
-
-            // Get all active invoke on play nodes and create walkers for them
+            AddNode(anotherNode);
         }
 
         public void Deinitialise()

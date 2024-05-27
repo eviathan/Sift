@@ -8,8 +8,8 @@
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
         Title="Sift"
-        Width="800"
-        Height="400"
+        Width="400"
+        Height="100"
         KeyDown="OnKeyDown"
         KeyUp="OnKeyUp">
 

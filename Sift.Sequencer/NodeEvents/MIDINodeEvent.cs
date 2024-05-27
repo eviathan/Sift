@@ -1,5 +1,6 @@
 using Sift.Sequencer.Interfaces;
 using Sift.Sequencer.Models.Nodes;
+using Sift.Sequencer.MIDI;
 
 namespace Sift.Sequencer.NodeEvents
 {
@@ -7,7 +8,8 @@ namespace Sift.Sequencer.NodeEvents
     {
         public void Invoke(NodeEventArgs e)
         {
-            throw new NotImplementedException();
+            MIDIService.Instance.SendMidiNoteOn(0);
+            MIDIService.Instance.SendMidiNoteOff(0);
         }
     }
 }
