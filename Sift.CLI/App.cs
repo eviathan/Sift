@@ -2,7 +2,6 @@ using Sift.Logging;
 using Sift.Sequencer;
 using Sift.Services;
 using Sift.Sequencer.MIDI;
-using Sift.CLI.Services;
 
 namespace Sift.CLI
 {
@@ -13,12 +12,11 @@ namespace Sift.CLI
         public readonly SiftSequencer Sequencer;
         public readonly IKeyEventService<ConsoleKey> KeyEventService;
 
-        public App()
+        public App(Sequence sequence, SiftSequencer sequencer, IKeyEventService<ConsoleKey> keyEventService)
         {
-            Sequence = new Sequence();
-            Sequencer = new SiftSequencer(Sequence);
-
-            KeyEventService = new ConsoleKeyEventService(Sequencer);
+            Sequence = sequence ?? throw new ArgumentNullException(nameof(sequence));
+            Sequencer = sequencer ?? throw new ArgumentNullException(nameof(sequencer));
+            KeyEventService = keyEventService ?? throw new ArgumentNullException(nameof(keyEventService));
         }
 
         public async Task Init()
