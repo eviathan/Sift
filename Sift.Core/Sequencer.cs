@@ -32,7 +32,8 @@ namespace Sift.Core
 
         public void Play()
         {
-            if (IsPlaying) return;
+            if (IsPlaying)
+                return;
 
             IsPlaying = true;
             StartTime = DateTime.Now;

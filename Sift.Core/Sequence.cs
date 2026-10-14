@@ -1,7 +1,6 @@
 using Sift.Core.Grid;
 using Sift.Core.Models;
 using Sift.Core.Models.Nodes;
-using Sift.Core.Components;
 using Sift.Core.Nodes;
 
 // NOTE: Currently our walkers are condinuing to walk in the linear direction and not terminating/ geting readded to the pool when they hit a node.
@@ -10,6 +9,8 @@ namespace Sift.Core
     public class Sequence
     {
         public ushort Tempo { get; private set; } = 40;
+        public Quantisation Quantisation { get; set; } = new Quantisation(1, 4);
+
         public Grid<Node> Grid { get; private set; } = new();
 
         private GridWalkerPool _walkerPool { get; set; }
