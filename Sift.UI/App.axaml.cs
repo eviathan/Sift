@@ -4,7 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Sift.Logging;
-using Sift.Sequencer;
+using Sift.Core;
 using Sift.Services;
 using Sift.UI.Interfaces;
 using Sift.UI.ViewModels;
@@ -17,7 +17,7 @@ namespace Sift.UI
     {
         public bool IsRunning = true;
         public Sequence Sequence { get; private set; }
-        public SiftSequencer Sequencer { get; private set; }
+        public Sequencer Sequencer { get; private set; }
         public IKeyEventService<Key> KeyEventService { get; private set; }
 
         public override void Initialize()
@@ -25,7 +25,7 @@ namespace Sift.UI
             Logger.WriteBanner("Sift v0.0.1");
 
             Sequence = new Sequence();
-            Sequencer = new SiftSequencer(Sequence);
+            Sequencer = new Sequencer(Sequence);
             KeyEventService = new AvaloniaKeyEventService(Sequencer);
 
             AvaloniaXamlLoader.Load(this);

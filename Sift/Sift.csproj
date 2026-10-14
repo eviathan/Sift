@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Sift.Sequencer\Sift.Sequencer.csproj" />
+    <ProjectReference Include="..\Sift.Core\Sift.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

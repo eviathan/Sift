@@ -1,14 +1,15 @@
+using Sift.Core;
 using Sift.Services;
 
 namespace Sift.CLI.Services
 {
     public class ConsoleKeyEventService : IKeyEventService<ConsoleKey>
     {
-        private readonly Sequencer.SiftSequencer _sequencer;
+        private readonly Sequencer _sequencer;
 
         public Dictionary<ConsoleKey, Action> KeyEvents { get; set; } = [];
 
-        public ConsoleKeyEventService(Sequencer.SiftSequencer sequencer)
+        public ConsoleKeyEventService(Sequencer sequencer)
         {
             _sequencer = sequencer;
         }

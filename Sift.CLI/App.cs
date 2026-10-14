@@ -1,19 +1,23 @@
 using Sift.Logging;
-using Sift.Sequencer;
+using Sift.Core;
 using Sift.Services;
-using Sift.Sequencer.MIDI;
+using Sift.Core.MIDI;
+using Microsoft.Extensions.Logging;
 
 namespace Sift.CLI
 {
     public class App
     {
+        private readonly ILogger<App> _logger;
+
         public bool IsRunning = true;
         public readonly Sequence Sequence;
-        public readonly SiftSequencer Sequencer;
+        public readonly Sequencer Sequencer;
         public readonly IKeyEventService<ConsoleKey> KeyEventService;
 
-        public App(Sequence sequence, SiftSequencer sequencer, IKeyEventService<ConsoleKey> keyEventService)
+        public App(ILogger<App> logger, Sequence sequence, Sequencer sequencer, IKeyEventService<ConsoleKey> keyEventService)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             Sequence = sequence ?? throw new ArgumentNullException(nameof(sequence));
             Sequencer = sequencer ?? throw new ArgumentNullException(nameof(sequencer));
             KeyEventService = keyEventService ?? throw new ArgumentNullException(nameof(keyEventService));
@@ -22,7 +26,7 @@ namespace Sift.CLI
         public async Task Init()
         {
             Logger.WriteBanner("Sift v0.0.1");
-            Console.WriteLine("Press 'Q' to quit, do'Spacebar' to start/stop the sequence.");
+            _logger.LogInformation("Press 'Q' to quit, do'Spacebar' to start/stop the sequence.");
 
             RegisterKeyEvents();
 
@@ -57,7 +61,8 @@ namespace Sift.CLI
 
             KeyEventService.RegisterKeyEvent(ConsoleKey.Q, () =>
             {
-                Console.WriteLine("Quitting the application...");
+                _logger.LogInformation("Quitting the application...");
+                
                 MIDIService.Instance.KillAllNotes();
                 IsRunning = false;
             });

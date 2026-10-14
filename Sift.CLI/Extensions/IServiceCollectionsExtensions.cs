@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Sift.CLI.Services;
-using Sift.Sequencer;
-using Sift.Sequencer.Factories;
-using Sift.Sequencer.Models;
-using Sift.Sequencer.Models.Nodes;
+using Sift.Core;
+using Sift.Core.Factories;
+using Sift.Core.Models;
+using Sift.Core.Models.Nodes;
 using Sift.Services;
 
 namespace Sift.CLI.Extensions
@@ -18,7 +18,7 @@ namespace Sift.CLI.Extensions
             serviceCollection.AddScoped<NodeFactory>();
             serviceCollection.AddScoped<Port>();
             serviceCollection.AddScoped<Sequence>();
-            serviceCollection.AddScoped<SiftSequencer>();
+            serviceCollection.AddScoped<Sequencer>();
 
             serviceCollection.AddScoped<IKeyEventService<ConsoleKey>, ConsoleKeyEventService>();
 
