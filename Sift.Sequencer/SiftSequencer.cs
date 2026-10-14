@@ -7,7 +7,7 @@ namespace Sift.Sequencer
     {
         public bool IsPlaying { get; private set; }
         public DateTime StartTime { get; private set; }
-        public int TickCount { get; private set; }
+        public UInt64 TickCount { get; private set; }
 
         private const int BUSY_WAITING_TIMEOUT_IN_MS = 1;
 

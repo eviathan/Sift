@@ -4,11 +4,12 @@ using Sift.Sequencer.Models.Nodes;
 using Sift.Sequencer.NodeEvents;
 using Sift.Sequencer.Nodes;
 
+// NOTE: Currently our walkers are condinuing to walk in the linear direction and not terminating/ geting readded to the pool when they hit a node.
 namespace Sift.Sequencer
 {
     public class Sequence
     {
-        public ushort Tempo { get; private set; } = 120;
+        public ushort Tempo { get; private set; } = 40;
         public Grid<Node> Grid { get; private set; } = new();
 
         private GridWalkerPool _walkerPool { get; set; }
@@ -31,6 +32,7 @@ namespace Sift.Sequencer
             )
             {
                 Events = [
+                    new MIDINodeEvent(),
                    new EmitNodeEvent(new Dictionary<Vector3D, int?>
                     {
                         { new Vector3D(1, 0, 0), 1 },
@@ -42,6 +44,7 @@ namespace Sift.Sequencer
             var nextNode = new TestNode(new Vector3D(4, 0, 0))
             {
                 Events = [
+                    new MIDINodeEvent(),
                     new EmitNodeEvent(new Dictionary<Vector3D, int?>
                     {
                         { new Vector3D(0, 1, 0), 1 },
@@ -65,6 +68,7 @@ namespace Sift.Sequencer
             var yetAnotherNode = new TestNode(new Vector3D(0, 4, 0))
             {
                 Events = [
+                    new MIDINodeEvent(),
                     new EmitNodeEvent(new Dictionary<Vector3D, int?>
                     {
                         { new Vector3D(0, -1, 0), 1 },
@@ -84,7 +88,7 @@ namespace Sift.Sequencer
             _activeWalkers.Clear();
         }
 
-        public void Update(int tick)
+        public void Update(UInt64 tick)
         {
             Console.WriteLine($"Tick: {tick}");
 
@@ -118,6 +122,8 @@ namespace Sift.Sequencer
                 }
             }
             _queuedWalkers.Clear();
+
+            Console.WriteLine($"PoolSize: {_walkerPool.Size}");
         }
 
         private void TraverseWalkers()

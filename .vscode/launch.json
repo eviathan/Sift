@@ -10,7 +10,7 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/Sift.CLI/bin/Debug/net8.0/Sift.CLI.dll",
+            "program": "${workspaceFolder}/Sift.CLI/bin/Debug/net9.0/Sift.CLI.dll",
             "args": ["--vscode"],
             "cwd": "${workspaceFolder}/Sift",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
@@ -22,7 +22,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Sift.UI/bin/Debug/net8.0/Sift.UI.dll",
+            "program": "${workspaceFolder}/Sift.UI/bin/Debug/net9.0/Sift.UI.dll",
             "args": [],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,

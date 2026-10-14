@@ -6,6 +6,8 @@ namespace Sift.Sequencer.Models
 {
     public class Pool<T> where T : class, IDisposable
     {
+        public int Size => _objects.Count;
+
         private readonly ConcurrentBag<T> _objects;
         private readonly Func<Pool<T>, T> _objectGenerator;
 
@@ -20,7 +22,7 @@ namespace Sift.Sequencer.Models
 
         public T Get()
         {
-            if (_objects.TryTake(out T item))
+            if (_objects.TryTake(out var item))
                 return item;
 
             return _objectGenerator(this);

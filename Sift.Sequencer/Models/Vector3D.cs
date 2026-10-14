@@ -36,11 +36,11 @@ namespace Sift.Sequencer.Grid
         }
 
         public static Vector3D operator +(Vector3D a, Vector3D b) =>
-            new Vector3D(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
+            new(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
 
         public static Vector3D operator *(Vector3D a, int b) =>
             b != 1
-                ? new Vector3D(a.X * b, a.Y * b, a.Z * b)
+                ? new(a.X * b, a.Y * b, a.Z * b)
                 : a;
     }
 }

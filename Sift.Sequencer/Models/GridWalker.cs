@@ -5,6 +5,7 @@ namespace Sift.Sequencer.Models
 {
     public class GridWalker : IDisposable
     {
+        public bool IsExpired { get; set; } = false;
         public Vector3D Position { get; private set; }
 
         private Vector3D _startingPosition { get; set; }
@@ -47,6 +48,7 @@ namespace Sift.Sequencer.Models
 
         public void Dispose()
         {
+            Reset();
             _pool.Return(this);
         }
     }
