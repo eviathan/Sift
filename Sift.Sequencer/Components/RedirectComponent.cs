@@ -1,11 +1,11 @@
 using Sift.Sequencer.Interfaces;
 using Sift.Sequencer.Models.Nodes;
 
-namespace Sift.Sequencer.NodeEvents
+namespace Sift.Sequencer.Components
 {
-    public class RedirectNodeEvent : INodeEvent
+    public class RedirectComponent : IComponent
     {
-        public void Invoke(NodeEventArgs e)
+        public Task InvokeAsync(NodeEventArgs e)
         {
             throw new NotImplementedException();
         }

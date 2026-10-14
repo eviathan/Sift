@@ -3,8 +3,7 @@ using Sift.Sequencer.Nodes;
 
 namespace Sift.Sequencer.Interfaces
 {
-    public interface INodeEvent
+    public interface IComponent
     {
-        void Invoke(NodeEventArgs e);
     }
 }

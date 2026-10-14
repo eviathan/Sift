@@ -2,11 +2,11 @@ using Sift.Sequencer.Interfaces;
 using Sift.Sequencer.Models.Nodes;
 using Sift.Sequencer.MIDI;
 
-namespace Sift.Sequencer.NodeEvents
+namespace Sift.Sequencer.Components
 {
-    public class MIDINodeEvent : INodeEvent
+    public class MIDIComponent : IComponent
     {
-        public void Invoke(NodeEventArgs e)
+        public async Task InvokeAsync(NodeEventArgs e)
         {
             MIDIService.Instance.SendMidiNoteOn(0);
             MIDIService.Instance.SendMidiNoteOff(0);

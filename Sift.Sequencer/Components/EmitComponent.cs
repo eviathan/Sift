@@ -2,18 +2,18 @@ using Sift.Sequencer.Grid;
 using Sift.Sequencer.Interfaces;
 using Sift.Sequencer.Models.Nodes;
 
-namespace Sift.Sequencer.NodeEvents
+namespace Sift.Sequencer.Components
 {
-    public class EmitNodeEvent : INodeEvent
+    public class EmitComponent : IComponent
     {
         private Dictionary<Vector3D, int?> _directions { get; set; }
 
-        public EmitNodeEvent(Dictionary<Vector3D, int?> directions)
+        public EmitComponent(Dictionary<Vector3D, int?> directions)
         {
             _directions = directions;
         }
 
-        public void Invoke(NodeEventArgs e)
+        public async Task InvokeAsync(NodeEventArgs e)
         {
             foreach (var direction in _directions)
             {
@@ -22,6 +22,8 @@ namespace Sift.Sequencer.NodeEvents
                 var vector = direction.Key * (direction.Value ?? 1);
                 e.Sequence.EnqueueWalker(e.Node, vector);
             }
+
+            return;
         }
     }
 }

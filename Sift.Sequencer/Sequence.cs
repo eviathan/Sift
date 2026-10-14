@@ -1,7 +1,7 @@
 using Sift.Sequencer.Grid;
 using Sift.Sequencer.Models;
 using Sift.Sequencer.Models.Nodes;
-using Sift.Sequencer.NodeEvents;
+using Sift.Sequencer.Components;
 using Sift.Sequencer.Nodes;
 
 // NOTE: Currently our walkers are condinuing to walk in the linear direction and not terminating/ geting readded to the pool when they hit a node.
@@ -26,61 +26,61 @@ namespace Sift.Sequencer
 
         public void Initialise()
         {
-            var originNode = new TestNode(
-               position: new Vector3D(0, 0, 0),
-               emitOnPlay: true
-            )
-            {
-                Events = [
-                    new MIDINodeEvent(),
-                   new EmitNodeEvent(new Dictionary<Vector3D, int?>
-                    {
-                        { new Vector3D(1, 0, 0), 1 },
-                    }),
-                    new LogNodeEvent()
-               ]
-            };
+            // var originNode = new TestNode(
+            //    position: new Vector3D(0, 0, 0),
+            //    emitOnPlay: true
+            // )
+            // {
+            //     Ports = [
+            //         new MIDIComponent(),
+            //        new EmitComponent(new Dictionary<Vector3D, int?>
+            //         {
+            //             { new Vector3D(1, 0, 0), 1 },
+            //         }),
+            //         new LogComponent()
+            //    ]
+            // };
 
-            var nextNode = new TestNode(new Vector3D(4, 0, 0))
-            {
-                Events = [
-                    new MIDINodeEvent(),
-                    new EmitNodeEvent(new Dictionary<Vector3D, int?>
-                    {
-                        { new Vector3D(0, 1, 0), 1 },
-                    }),
-                    new LogNodeEvent()
-                ]
-            };
+            // var nextNode = new TestNode(new Vector3D(4, 0, 0))
+            // {
+            //     Ports = [
+            //         new MIDIComponent(),
+            //         new EmitComponent(new Dictionary<Vector3D, int?>
+            //         {
+            //             { new Vector3D(0, 1, 0), 1 },
+            //         }),
+            //         new LogComponent()
+            //     ]
+            // };
 
-            var anotherNode = new TestNode(new Vector3D(4, 4, 0))
-            {
-                Events = [
-                    new MIDINodeEvent(),
-                    new EmitNodeEvent(new Dictionary<Vector3D, int?>
-                    {
-                        { new Vector3D(-1, 0, 0), 1 },
-                    }),
-                    new LogNodeEvent()
-                ]
-            };
+            // var anotherNode = new TestNode(new Vector3D(4, 4, 0))
+            // {
+            //     Ports = [
+            //         new MIDIComponent(),
+            //         new EmitComponent(new Dictionary<Vector3D, int?>
+            //         {
+            //             { new Vector3D(-1, 0, 0), 1 },
+            //         }),
+            //         new LogComponent()
+            //     ]
+            // };
 
-            var yetAnotherNode = new TestNode(new Vector3D(0, 4, 0))
-            {
-                Events = [
-                    new MIDINodeEvent(),
-                    new EmitNodeEvent(new Dictionary<Vector3D, int?>
-                    {
-                        { new Vector3D(0, -1, 0), 1 },
-                    }),
-                    new LogNodeEvent()
-                ]
-            };
+            // var yetAnotherNode = new TestNode(new Vector3D(0, 4, 0))
+            // {
+            //     Ports = [
+            //         new MIDIComponent(),
+            //         new EmitComponent(new Dictionary<Vector3D, int?>
+            //         {
+            //             { new Vector3D(0, -1, 0), 1 },
+            //         }),
+            //         new LogComponent()
+            //     ]
+            // };
 
-            AddNode(originNode);
-            AddNode(nextNode);
-            AddNode(anotherNode);
-            AddNode(yetAnotherNode);
+            // AddNode(originNode);
+            // AddNode(nextNode);
+            // AddNode(anotherNode);
+            // AddNode(yetAnotherNode);
         }
 
         public void Deinitialise()
@@ -99,8 +99,8 @@ namespace Sift.Sequencer
                 {
                     _eventArgs.Node = node;
 
-                    foreach (var e in node.Events)
-                        e.Invoke(_eventArgs);
+                    // foreach (var e in node.Bus)
+                    //     e.InvokeAsync(_eventArgs);
                 }
             }
             else
@@ -138,8 +138,8 @@ namespace Sift.Sequencer
 
                     node.DidStart(_eventArgs);
 
-                    foreach (var nodeEvent in node.Events)
-                        nodeEvent.Invoke(_eventArgs);
+                    // foreach (var nodeEvent in node.Ports)
+                    //     nodeEvent.InvokeAsync(_eventArgs);
 
                     node.DidEnd(_eventArgs);
                 }
