@@ -165,21 +165,57 @@ namespace Sift.Core
                 if (!_isRunning)
                     return;
 
+                Drain();
+
                 while (true)
                 {
-                    Drain();
-
                     while (_scheduler.TryDequeueDue(CurrentTime, out var evt))
                         Dispatch(evt!);
 
                     ReleaseWaiters();
 
+                    // NOTE: Picks up what this tick's components emitted so the jump below can't skip their arrivals
+                    Drain();
+
+                    var nextDueTicks = GetNextDueTicks();
+
+                    // NOTE: Late emits and retargets can land on the current tick, handle them before moving on
+                    if (nextDueTicks <= CurrentTime.Ticks)
+                        continue;
+
                     if (CurrentTime.Ticks >= targetTime.Ticks)
                         break;
 
-                    CurrentTime += 1;
+                    // NOTE: Jump straight to the next event/wait rather than stepping through empty ticks
+                    CurrentTime = new Time(Math.Min(targetTime.Ticks, nextDueTicks));
                 }
             }
+        }
+
+        // NOTE: Lets the clock spin rather than sleep when something is about to happen. Null when nothing is scheduled
+        public Time? NextDueTime
+        {
+            get
+            {
+                lock (_sync)
+                {
+                    var nextDueTicks = GetNextDueTicks();
+                    return nextDueTicks == long.MaxValue ? null : new Time(nextDueTicks);
+                }
+            }
+        }
+
+        private long GetNextDueTicks()
+        {
+            var nextDueTicks = _scheduler.TryPeekDueTime(out var dueTime) ? dueTime.Ticks : long.MaxValue;
+
+            lock (_waitersSync)
+            {
+                if (_waiters.TryPeek(out _, out var priority))
+                    nextDueTicks = Math.Min(nextDueTicks, priority.Ticks);
+            }
+
+            return nextDueTicks;
         }
 
         private Task Enqueue(IGridCommand command, CommandSource source)

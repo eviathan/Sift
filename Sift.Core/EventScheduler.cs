@@ -35,6 +35,18 @@ namespace Sift.Core
             return false;
         }
 
+        public bool TryPeekDueTime(out Time dueTime)
+        {
+            if (_queue.TryPeek(out _, out var priority))
+            {
+                dueTime = new Time(priority.Ticks);
+                return true;
+            }
+
+            dueTime = default;
+            return false;
+        }
+
         public void Clear() =>
             _queue.Clear();
     }
