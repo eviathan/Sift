@@ -1,4 +1,5 @@
 using Sift.Core.Enums;
+using Sift.Core.Events;
 using Sift.Core.Models;
 
 namespace Sift.Core.Interfaces
@@ -20,5 +21,8 @@ namespace Sift.Core.Interfaces
         Task<Time> WaitUntilAsync(Time time, CancellationToken cancellationToken);
 
         Task<Time> WaitTicksAsync(long ticks, CancellationToken cancellationToken);
+
+        // NOTE: For the UI, e.g. NoteOn/NoteOff or a custom RuntimeEvent. Stamped with the current tick
+        void Publish(RuntimeEvent runtimeEvent);
     }
 }

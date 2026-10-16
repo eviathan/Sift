@@ -1,11 +1,15 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Sift.Core.Commands;
+using Sift.Core.Components;
 using Sift.Core.Enums;
+using Sift.Core.Events;
+using Sift.Core.Grid;
 using Sift.Core.Interfaces;
 using Sift.Core.Models;
 using Sift.Core.Models.Nodes;
 using Sift.Core.Nodes;
+using Sift.Core.Snapshots;
 
 namespace Sift.Core
 {
@@ -19,6 +23,8 @@ namespace Sift.Core
         private readonly Sequence _sequence;
         private readonly EventScheduler _scheduler;
         private readonly SpatialPropagator _spatialPropagator;
+        private readonly RuntimeEventHub _events;
+        private readonly ComponentRegistry _registry;
 
         private readonly object _sync = new();
         private readonly ConcurrentQueue<PendingItem> _pending = new();
@@ -51,12 +57,14 @@ namespace Sift.Core
             set => Volatile.Write(ref _currentTicks, value.Ticks);
         }
 
-        public SequencerRuntime(ILogger<SequencerRuntime> logger, Sequence sequence, EventScheduler scheduler, SpatialPropagator spatialPropagator)
+        public SequencerRuntime(ILogger<SequencerRuntime> logger, Sequence sequence, EventScheduler scheduler, SpatialPropagator spatialPropagator, RuntimeEventHub events, ComponentRegistry registry)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _sequence = sequence ?? throw new ArgumentNullException(nameof(sequence));
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
             _spatialPropagator = spatialPropagator ?? throw new ArgumentNullException(nameof(spatialPropagator));
+            _events = events ?? throw new ArgumentNullException(nameof(events));
+            _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         }
 
         public void Start()
@@ -129,6 +137,23 @@ namespace Sift.Core
 
         public Task<bool> Redo() =>
             EnqueueHistory(isUndo: false);
+
+        // NOTE: Applied in order with commands, so the snapshot plus every later event is always consistent
+        public Task<SequenceSnapshot> GetSnapshotAsync()
+        {
+            var completion = new TaskCompletionSource<SequenceSnapshot>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _pending.Enqueue(new PendingSnapshot(completion));
+
+            DrainIfStopped();
+
+            return completion.Task;
+        }
+
+        public void Publish(RuntimeEvent runtimeEvent)
+        {
+            ArgumentNullException.ThrowIfNull(runtimeEvent);
+            _events.Publish(runtimeEvent, Now);
+        }
 
         public Task<Time> WaitTicksAsync(long ticks, CancellationToken cancellationToken) =>
             WaitUntilAsync(Now + Math.Max(0, ticks), cancellationToken);
@@ -272,14 +297,48 @@ namespace Sift.Core
                     case PendingHistory history:
                         spaceChanged |= ApplyHistory(history);
                         break;
+
+                    case PendingSnapshot snapshot:
+                        // NOTE: Retarget first so the snapshot's in-flight messages match the grid
+                        RetargetIfChanged(ref spaceChanged);
+                        snapshot.Completion.TrySetResult(CreateSnapshot());
+                        break;
                 }
             }
 
-            if (spaceChanged)
+            RetargetIfChanged(ref spaceChanged);
+        }
+
+        private void RetargetIfChanged(ref bool spaceChanged)
+        {
+            if (!spaceChanged)
+                return;
+
+            spaceChanged = false;
+
+            foreach (var message in _inFlight.Values)
             {
-                foreach (var message in _inFlight.Values)
-                    Resolve(message);
+                if (Resolve(message))
+                    Raise(new MessageRetargeted(message.Id, message.TargetNodeId, message.EndPosition, message.ArrivalTime));
             }
+        }
+
+        private SequenceSnapshot CreateSnapshot() =>
+            new(_events.LastSequence,
+                CurrentTime,
+                _isRunning,
+                _sequence.Tempo,
+                _sequence.Quantisation,
+                _sequence.TicksPerCell,
+                _sequence.Grid.Values.Select(x => SnapshotFactory.Create(x, _registry)).ToList(),
+                _inFlight.Values.Select(SnapshotFactory.Create).ToList(),
+                _undo.Count > 0,
+                _redo.Count > 0);
+
+        private void Raise(RuntimeEvent runtimeEvent)
+        {
+            if (_events.HasSubscribers)
+                _events.Publish(runtimeEvent, CurrentTime);
         }
 
         private bool ApplyCommand(PendingCommand pending)
@@ -289,6 +348,8 @@ namespace Sift.Core
                 pending.Completion.TrySetCanceled();
                 return false;
             }
+
+            var before = CaptureNode(pending.Command.NodeId);
 
             try
             {
@@ -301,12 +362,18 @@ namespace Sift.Core
                 }
 
                 CancelComponents(GetDetachedComponents(inverse));
+                RaiseNodeChange(pending.Command.NodeId, before, pending.Source);
+
+                if (pending.Source == CommandSource.User)
+                    RaiseHistoryChanged();
+
                 pending.Completion.TrySetResult();
                 return pending.Command.AffectsSpace;
             }
             catch (Exception ex)
             {
                 _logger.LogWarning($"[Tick {CurrentTime.Ticks}] {pending.Source} command {pending.Command.GetType().Name} rejected: {ex.Message}");
+                Raise(new CommandRejected(pending.Command, pending.Source, ex.Message));
                 pending.Completion.TrySetException(ex);
                 return false;
             }
@@ -322,12 +389,17 @@ namespace Sift.Core
                 return false;
             }
 
+            var before = CaptureNode(command.NodeId);
+
             try
             {
                 var inverse = command.Apply(_sequence.Grid);
                 to.Push(inverse);
 
                 CancelComponents(GetDetachedComponents(inverse));
+                RaiseNodeChange(command.NodeId, before, CommandSource.User);
+                RaiseHistoryChanged();
+
                 pending.Completion.TrySetResult(true);
                 return command.AffectsSpace;
             }
@@ -335,10 +407,37 @@ namespace Sift.Core
             {
                 // NOTE: The grid has moved on (e.g. a component changed it) so this entry can no longer be applied, drop it
                 _logger.LogWarning($"[Tick {CurrentTime.Ticks}] {(pending.IsUndo ? "Undo" : "Redo")} of {command.GetType().Name} failed: {ex.Message}");
+                Raise(new CommandRejected(command, CommandSource.User, ex.Message));
+                RaiseHistoryChanged();
+
                 pending.Completion.TrySetException(ex);
                 return false;
             }
         }
+
+        private (bool Existed, Vector3D Position) CaptureNode(Guid nodeId) =>
+            _sequence.Grid.TryGetNode(nodeId, out var node) ? (true, node.Position) : (false, default);
+
+        // NOTE: Works out what a command did by comparing the node before and after, so new commands need no extra wiring
+        private void RaiseNodeChange(Guid nodeId, (bool Existed, Vector3D Position) before, CommandSource source)
+        {
+            if (!_events.HasSubscribers)
+                return;
+
+            var exists = _sequence.Grid.TryGetNode(nodeId, out var node);
+
+            if (!before.Existed && exists)
+                Raise(new NodeAdded(SnapshotFactory.Create(node, _registry), source));
+            else if (before.Existed && !exists)
+                Raise(new NodeRemoved(nodeId, source));
+            else if (exists && node.Position != before.Position)
+                Raise(new NodeMoved(nodeId, before.Position, node.Position, source));
+            else if (exists)
+                Raise(new NodeChanged(SnapshotFactory.Create(node, _registry), source));
+        }
+
+        private void RaiseHistoryChanged() =>
+            Raise(new HistoryChanged(_undo.Count > 0, _redo.Count > 0));
 
         private void Launch(PendingEmit emit)
         {
@@ -351,10 +450,23 @@ namespace Sift.Core
             _logger.LogInformation($"[Tick {emit.EmitTime.Ticks}] Node {emit.SourceNodeId} emitting '{emit.Message.Payload}' via {emit.Direction}");
 
             Resolve(message, isLaunch: true);
+
+            Raise(new MessageEmitted(
+                message.Id,
+                message.SourceNodeId,
+                message.Origin,
+                message.Direction,
+                message.EmitTime,
+                message.TicksPerCell,
+                message.Message.Payload,
+                message.TargetNodeId,
+                message.EndPosition,
+                message.ArrivalTime));
         }
 
-        // NOTE: Finds the first node ahead of where the message currently is and (re)schedules its arrival
-        private void Resolve(InFlightMessage message, bool isLaunch = false)
+        // NOTE: Finds the first node ahead of where the message currently is and (re)schedules its arrival.
+        // Returns false when nothing changed
+        private bool Resolve(InFlightMessage message, bool isLaunch = false)
         {
             // NOTE: A launch never skips cells. Concurrent components can emit for a tick the clock has already passed,
             // that message should arrive late rather than fly straight through its target
@@ -373,7 +485,7 @@ namespace Sift.Core
             var isRetarget = message.Version > 0;
 
             if (isRetarget && targetNodeId == message.TargetNodeId && distance == message.Distance)
-                return;
+                return false;
 
             message.TargetNodeId = targetNodeId;
             message.Distance = distance;
@@ -388,14 +500,18 @@ namespace Sift.Core
                 _logger.LogInformation($"{prefix} Raycast hit Node {targetNodeId} at distance {distance} cells. Scheduled arrival for Tick {message.ArrivalTime.Ticks}.");
             else
                 _logger.LogInformation($"{prefix} Raycast hit nothing in space. Message will dissipate at Tick {message.ArrivalTime.Ticks}.");
+
+            return true;
         }
 
         private void Dispatch(NodeEvent nodeEvent)
         {
+            InFlightMessage? message = null;
+
             if (nodeEvent.InFlightId is { } inFlightId)
             {
                 // NOTE: Stale arrival, the message was retargeted after this was scheduled
-                if (!_inFlight.TryGetValue(inFlightId, out var message) || message.Version != nodeEvent.InFlightVersion)
+                if (!_inFlight.TryGetValue(inFlightId, out message) || message.Version != nodeEvent.InFlightVersion)
                     return;
 
                 _inFlight.Remove(inFlightId);
@@ -404,6 +520,10 @@ namespace Sift.Core
             if (nodeEvent.TargetNodeId is not { } targetNodeId)
             {
                 _logger.LogInformation($"[Tick {CurrentTime.Ticks}] Message '{nodeEvent.Message.Payload}' dissipated.");
+
+                if (message != null)
+                    Raise(new MessageDissipated(message.Id, message.EndPosition));
+
                 return;
             }
 
@@ -411,43 +531,53 @@ namespace Sift.Core
                 return;
 
             var isPlay = nodeEvent.TargetPortDirection == null;
+            var nodeInfo = SnapshotFactory.CreateInfo(node);
 
             _logger.LogInformation($"[Tick {CurrentTime.Ticks}] Dispatching '{nodeEvent.Message.Payload}' to Node {targetNodeId} {(isPlay ? "all ports (play)" : $"Port {nodeEvent.TargetPortDirection}")}");
 
             if (nodeEvent.TargetPortDirection is { } direction)
             {
-                InvokePort(node, direction, isPlay, nodeEvent.Message);
+                if (message != null)
+                    Raise(new MessageDelivered(message.Id, node.Id, direction));
+
+                InvokePort(node, nodeInfo, direction, isPlay, nodeEvent.Message);
             }
             else
             {
+                Raise(new NodeTriggeredByPlay(node.Id));
+
                 foreach (var portDirection in node.Bus.Keys)
-                    InvokePort(node, portDirection, isPlay, nodeEvent.Message);
+                    InvokePort(node, nodeInfo, portDirection, isPlay, nodeEvent.Message);
             }
         }
 
-        private void InvokePort(Node node, Direction direction, bool isPlay, Message message)
+        private void InvokePort(Node node, NodeInfo nodeInfo, Direction direction, bool isPlay, Message message)
         {
             // NOTE: Dispatch on the current tick rather than DueTime so late events never move time backwards
-            var context = new ComponentContext(node, direction, isPlay, message, CurrentTime, this);
+            var context = new ComponentContext(nodeInfo, direction, isPlay, message, CurrentTime, this);
 
             foreach (var component in node.GetPort(direction).Components)
             {
+                var invocation = new Invocation(Guid.NewGuid(), node.Id, direction, component);
+                Raise(new ComponentStarted(invocation.Id, node.Id, direction, component.Id));
+
                 try
                 {
-                    Track(component.InvokeAsync(context, GetComponentToken(component)), component, node, direction);
+                    Track(component.InvokeAsync(context, GetComponentToken(component)), invocation);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"Component {component.GetType().Name} on Node {node.Id} Port {direction} threw during dispatch.");
+                    Raise(new ComponentFinished(invocation.Id, node.Id, direction, component.Id, ComponentOutcome.Faulted, ex.Message));
                 }
             }
         }
 
-        private void Track(Task task, IComponent component, Node node, Direction direction)
+        private void Track(Task task, Invocation invocation)
         {
             if (task.IsCompleted)
             {
-                LogIfFaulted(task, component, node, direction);
+                OnComponentFinished(task, invocation);
                 return;
             }
 
@@ -456,14 +586,27 @@ namespace Sift.Core
             task.ContinueWith(completed =>
             {
                 _activeComponentTasks.TryRemove(completed, out _);
-                LogIfFaulted(completed, component, node, direction);
+                OnComponentFinished(completed, invocation);
             }, TaskScheduler.Default);
         }
 
-        private void LogIfFaulted(Task task, IComponent component, Node node, Direction direction)
+        // NOTE: Can run on the thread pool, so publishes with Now rather than touching CurrentTime
+        private void OnComponentFinished(Task task, Invocation invocation)
         {
-            if (task.IsFaulted)
-                _logger.LogError(task.Exception?.GetBaseException(), $"Component {component.GetType().Name} on Node {node.Id} Port {direction} faulted.");
+            var outcome = task.Status switch
+            {
+                TaskStatus.Faulted => ComponentOutcome.Faulted,
+                TaskStatus.Canceled => ComponentOutcome.Cancelled,
+                _ => ComponentOutcome.Completed
+            };
+
+            var error = task.Exception?.GetBaseException();
+
+            if (error != null)
+                _logger.LogError(error, $"Component {invocation.Component.GetType().Name} on Node {invocation.NodeId} Port {invocation.Port} faulted.");
+
+            if (_events.HasSubscribers)
+                Publish(new ComponentFinished(invocation.Id, invocation.NodeId, invocation.Port, invocation.Component.Id, outcome, error?.Message));
         }
 
         private void ReleaseWaiters()
@@ -537,5 +680,9 @@ namespace Sift.Core
         private sealed record PendingCommand(IGridCommand Command, CommandSource Source, TaskCompletionSource Completion) : PendingItem;
 
         private sealed record PendingHistory(bool IsUndo, TaskCompletionSource<bool> Completion) : PendingItem;
+
+        private sealed record PendingSnapshot(TaskCompletionSource<SequenceSnapshot> Completion) : PendingItem;
+
+        private sealed record Invocation(Guid Id, Guid NodeId, Direction Port, IComponent Component);
     }
 }

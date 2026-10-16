@@ -1,4 +1,5 @@
 using Sift.Core.Enums;
+using Sift.Core.Events;
 using Sift.Core.Extensions;
 using Sift.Core.Interfaces;
 using Sift.Core.Models.Nodes;
@@ -40,6 +41,7 @@ namespace Sift.Core.Components
             var config = Config;
 
             _midiOutput.NoteOn(config.Channel, config.Note, config.Velocity);
+            context.Sequencer.Publish(new NoteOn(context.Node.Id, config.Channel, config.Note, config.Velocity));
 
             try
             {
@@ -51,6 +53,7 @@ namespace Sift.Core.Components
             finally
             {
                 _midiOutput.NoteOff(config.Channel, config.Note);
+                context.Sequencer.Publish(new NoteOff(context.Node.Id, config.Channel, config.Note));
             }
         }
     }

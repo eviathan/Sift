@@ -1,12 +1,13 @@
 using Sift.Core.Enums;
 using Sift.Core.Interfaces;
-using Sift.Core.Nodes;
+using Sift.Core.Snapshots;
 
 namespace Sift.Core.Models.Nodes
 {
     public sealed class ComponentContext
     {
-        public Node Node { get; }
+        // NOTE: A copy taken at dispatch, change the node through Sequencer.Submit
+        public NodeInfo Node { get; }
 
         // NOTE: The port this component sits on, which is also the direction it emits in
         public Direction Port { get; }
@@ -20,7 +21,7 @@ namespace Sift.Core.Models.Nodes
 
         public ISequencerContext Sequencer { get; }
 
-        public ComponentContext(Node node, Direction port, bool isPlay, Message message, Time dispatchTime, ISequencerContext sequencer)
+        public ComponentContext(NodeInfo node, Direction port, bool isPlay, Message message, Time dispatchTime, ISequencerContext sequencer)
         {
             Node = node ?? throw new ArgumentNullException(nameof(node));
             Port = port;

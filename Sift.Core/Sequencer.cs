@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Sift.Core.Events;
 using Sift.Core.Interfaces;
 
 namespace Sift.Core
@@ -15,6 +16,7 @@ namespace Sift.Core
         private readonly Sequence _sequence;
         private readonly SequencerRuntime _runtime;
         private readonly IMidiOutput _midiOutput;
+        private readonly RuntimeEventHub _events;
 
         // NOTE: Guards Play/Stop and the clock's position so a restart can never be advanced with a stale position
         private readonly object _sync = new();
@@ -24,6 +26,7 @@ namespace Sift.Core
 
         private double _position;
         private long _lastTimestamp;
+        private int _lastTempo;
 
         public bool IsPlaying => _isPlaying;
 
@@ -32,12 +35,14 @@ namespace Sift.Core
 
         public double TicksPerSecond => _sequence.Tempo / 60.0 * Time.TicksPerQuarterNote;
 
-        public Sequencer(Sequence sequence, SequencerRuntime runtime, IMidiOutput midiOutput)
+        public Sequencer(Sequence sequence, SequencerRuntime runtime, IMidiOutput midiOutput, RuntimeEventHub events)
         {
             _sequence = sequence ?? throw new ArgumentNullException(nameof(sequence));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
 
             _midiOutput = midiOutput ?? throw new ArgumentNullException(nameof(midiOutput));
+            _events = events ?? throw new ArgumentNullException(nameof(events));
+            _lastTempo = _sequence.Tempo;
 
             _clockThread = new Thread(RunClock)
             {
@@ -71,6 +76,8 @@ namespace Sift.Core
                 Volatile.Write(ref _position, 0);
                 _lastTimestamp = Stopwatch.GetTimestamp();
                 _isPlaying = true;
+
+                PublishTransport(0, _lastTimestamp);
             }
         }
 
@@ -85,6 +92,7 @@ namespace Sift.Core
                 _runtime.Stop();
 
                 Volatile.Write(ref _position, 0);
+                PublishTransport(0, Stopwatch.GetTimestamp());
             }
 
             // NOTE: Cancelled MIDI components send their own note offs, this catches anything left hanging
@@ -97,6 +105,12 @@ namespace Sift.Core
             {
                 if (!_isPlaying)
                 {
+                    lock (_sync)
+                    {
+                        if (!_isPlaying && _sequence.Tempo != _lastTempo)
+                            PublishTransport(0, Stopwatch.GetTimestamp());
+                    }
+
                     Thread.Sleep(IDLE_SLEEP_IN_MS);
                     continue;
                 }
@@ -116,11 +130,22 @@ namespace Sift.Core
                     _lastTimestamp = now;
 
                     Volatile.Write(ref _position, position);
+
+                    if (_sequence.Tempo != _lastTempo)
+                        PublishTransport(position, now);
+
                     _runtime.AdvanceTo(new Time((long)position));
                 }
 
                 WaitForNextTick(position, ticksPerSecond);
             }
+        }
+
+        // NOTE: Only called under _sync
+        private void PublishTransport(double position, long timestamp)
+        {
+            _lastTempo = _sequence.Tempo;
+            _events.Publish(new TransportChanged(_isPlaying, _lastTempo, position, TicksPerSecond, timestamp), new Time((long)position));
         }
 
         private void WaitForNextTick(double position, double ticksPerSecond)

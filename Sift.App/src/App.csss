@@ -1,0 +1,246 @@
+/* App.csss - Sift styles, after Spot's default theme */
+
+/* -- Palette -------------------------------------------------------------------- */
+$page:           #262C3D;
+$panel:          #2A2D3D;
+$card:           #222530;
+$header:         #CBCACC;
+$footer:         #000000;
+$text:           #FFFFFF;
+$secondary:      #8B96B2;
+$dimmed:         #3C4661;
+$accent:         #8CD973;
+$error:          #FF8080;
+
+/* -- Window --------------------------------------------------------------------- */
+.root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: $page;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* The bar at the top, under the (transparent) title bar: AppKit drags the window from it */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  background: $header;
+  flex-shrink: 0;
+}
+
+.header-glyph {
+  width: 12px;
+  height: 25px;
+}
+
+.body {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  flex-grow: 1;
+  min-height: 0;
+  /* NOTE: The sidebar's colour, so it reads as full height whatever its content (the scene covers the rest) */
+  background: $panel;
+}
+
+/* -- Scene ---------------------------------------------------------------------- */
+.scene {
+  display: flex;
+  flex-grow: 1;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.scene-badge {
+  position: absolute;
+  left: 14px;
+  top: 12px;
+  padding: 4px 9px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.scene-badge-text {
+  color: $secondary;
+  font-size: 11px;
+}
+
+.scene-hint {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  pointer-events: none;
+}
+
+.scene-hint-text {
+  color: rgba(139, 150, 178, 0.6);
+  font-size: 11px;
+}
+
+/* -- Sidebar -------------------------------------------------------------------- */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  flex-shrink: 0;
+  padding: 16px 14px;
+  gap: 10px;
+  overflow: hidden;
+}
+
+/* A small capitalised heading over a card */
+.heading {
+  color: $secondary;
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 20px;
+}
+
+.row-label {
+  color: $secondary;
+  font-size: 12px;
+}
+
+.row-value {
+  color: $text;
+  font-size: 12px;
+}
+
+.title {
+  color: $text;
+  font-size: 15px;
+}
+
+.note {
+  color: $secondary;
+  font-size: 11px;
+}
+
+.chips {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip-text {
+  color: $text;
+  font-size: 11px;
+}
+
+.layer-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.layer-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* -- Transport ------------------------------------------------------------------ */
+.transport {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 56px;
+  background: $footer;
+  padding: 0 16px;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+/* NOTE: Margins rather than gap, Paper leaves gap out of a nested row's natural width so its children get squeezed */
+.transport-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.transport-position {
+  color: $text;
+  font-size: 18px;
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.transport-label {
+  color: $secondary;
+  font-size: 11px;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.transport-value {
+  color: $text;
+  font-size: 13px;
+  margin: 0 6px;
+  flex-shrink: 0;
+}
+
+.spacer {
+  flex-grow: 1;
+}
+
+/* A quiet rounded button: white text on a faint fill */
+.pill {
+  display: flex;
+  flex-shrink: 0;
+  margin: 0 2px;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  min-width: 24px;
+  padding: 0 9px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.pill:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.pill-text {
+  color: $text;
+  font-size: 12px;
+}
+
+.segmented {
+  display: flex;
+  flex-direction: row;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+}

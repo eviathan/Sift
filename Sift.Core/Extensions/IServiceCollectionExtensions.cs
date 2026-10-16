@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Sift.Core.Components;
+using Sift.Core.Events;
 using Sift.Core.Factories;
 using Sift.Core.Interfaces;
 using Sift.Core.MIDI;
@@ -15,6 +16,7 @@ namespace Sift.Core.Extensions
             serviceCollection.AddSingleton<SequencerRuntime>();
             serviceCollection.AddSingleton<EventScheduler>();
             serviceCollection.AddSingleton<SpatialPropagator>();
+            serviceCollection.AddSingleton<RuntimeEventHub>();
             serviceCollection.AddSingleton<ComponentRegistry>();
             serviceCollection.AddSingleton<ComponentFactory>();
             serviceCollection.AddSingleton<IMidiOutput, DryWetMidiOutput>();

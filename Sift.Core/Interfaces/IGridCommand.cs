@@ -6,6 +6,9 @@ namespace Sift.Core.Interfaces
     // NOTE: Every change to the grid goes through a command so it's applied on the clock thread between ticks
     public interface IGridCommand
     {
+        // NOTE: The node this command adds, removes or changes
+        Guid NodeId { get; }
+
         // NOTE: True when nodes are added, removed or moved, which means in-flight messages need re-resolving
         bool AffectsSpace { get; }
 

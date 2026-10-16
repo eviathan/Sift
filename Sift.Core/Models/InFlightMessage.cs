@@ -25,6 +25,9 @@ namespace Sift.Core.Models
 
         public Direction TargetPortDirection => Direction.Opposite();
 
+        // NOTE: The target's cell, or where the ray gives up when there is no target
+        public Vector3D EndPosition => Origin + Direction.ToVector() * Distance;
+
         public InFlightMessage(Guid sourceNodeId, Vector3D origin, Direction direction, Time emitTime, long ticksPerCell, Message message)
         {
             Id = Guid.NewGuid();

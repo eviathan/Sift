@@ -7,6 +7,8 @@ namespace Sift.Core.Commands
 {
     public sealed record AddNode(Node Node) : IGridCommand
     {
+        public Guid NodeId => Node.Id;
+
         public bool AffectsSpace => true;
 
         public IGridCommand Apply(Grid<Node> grid)
