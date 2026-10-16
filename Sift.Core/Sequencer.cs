@@ -64,10 +64,7 @@ namespace Sift.Core
 
                 var crotchetLengthInMilliseconds = 60000.0 / _sequence.Tempo;
 
-                var targetTick = (UInt64)(
-                    _stopwatch.Elapsed.TotalMilliseconds
-                    / crotchetLengthInMilliseconds
-                    * TICKS_PER_CROTCHET);
+                var targetTick = (UInt64)(_stopwatch.Elapsed.TotalMilliseconds / crotchetLengthInMilliseconds * TICKS_PER_CROTCHET);
 
                 while (IsPlaying && TickCount < targetTick)
                 {
