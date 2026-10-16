@@ -5,7 +5,7 @@ namespace Sift.Core.Components
 {
     public class RedirectComponent : IComponent
     {
-        public Task InvokeAsync(NodeEventArgs e)
+        public Task InvokeAsync(ComponentEventArgs args, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

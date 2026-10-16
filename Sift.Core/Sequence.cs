@@ -16,18 +16,19 @@ namespace Sift.Core
 
         public Grid<Node> Grid { get; private set; } = new();
 
-        private NodeEventArgs _eventArgs { get; set; } = new();
+        private GridWalkerPool _walkerPool { get; set; }
+        private List<GridWalker> _activeWalkers { get; set; } = [];
+        private List<(Node Node, Vector3D Direction)> _queuedWalkers { get; set; } = [];
+
 
         public Sequence(ILogger<Sequence> logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            
-            _eventArgs.Sequence = this;
+            _walkerPool = new GridWalkerPool(p => new GridWalker(p), 100);
         }
 
         public void Initialise()
         {
-            
         }
 
         public void Deinitialise()
@@ -44,7 +45,6 @@ namespace Sift.Core
                 var initialNodes = Grid.Values.Where(x => x.EmitOnPlay && x.IsActive).ToList();
                 foreach (var node in initialNodes)
                 {
-                    _eventArgs.Node = node;
 
                     // foreach (var e in node.Bus)
                     //     e.InvokeAsync(_eventArgs);
@@ -52,22 +52,8 @@ namespace Sift.Core
             }
             else
             {
-                // TraverseWalkers();
+                // DO THING HERE
             }
-        }
-
-        public void AddNode(Node node)
-        {
-            if (node == null)
-                throw new ArgumentNullException("Cannot add a null node to the Grid!");
-
-            Grid[node.Position.X, node.Position.Y, node.Position.Z] = node;
-        }
-
-        public void RemoveNode<TTreeNode>(int x, int y, int z)
-            where TTreeNode : Node
-        {
-            Grid.Remove(x, y, z);
         }
     }
 }

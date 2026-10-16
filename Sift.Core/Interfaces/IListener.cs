@@ -4,6 +4,6 @@ namespace Sift.Core.Interfaces
 {
     public interface IListener
     {
-        Task OnReceivedAsync(NodeEventArgs e);
+        Task OnReceivedAsync(ComponentEventArgs e);
     }
 }

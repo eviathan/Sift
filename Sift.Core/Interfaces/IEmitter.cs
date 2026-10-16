@@ -4,6 +4,6 @@ namespace Sift.Core.Interfaces
 {
     public interface IEmitter
     {
-        Task EmitAsync(NodeEventArgs e);
+        Task EmitAsync(ComponentEventArgs e);
     }
 }

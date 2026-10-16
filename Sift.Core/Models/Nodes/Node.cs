@@ -1,3 +1,4 @@
+using Sift.Core.Enums;
 using Sift.Core.Grid;
 using Sift.Core.Models;
 using Sift.Core.Models.Nodes;
@@ -24,8 +25,13 @@ namespace Sift.Core.Nodes
             // EmitOnPlay = emitOnPlay;            
         }
 
-        public virtual void DidStart(NodeEventArgs e) { }
+        public Port GetPort(Direction direction)
+        {
+            return Bus[direction];
+        }
 
-        public virtual void DidEnd(NodeEventArgs e) { }
+        public virtual void DidStart(ComponentEventArgs e) { }
+
+        public virtual void DidEnd(ComponentEventArgs e) { }
     }
 }

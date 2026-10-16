@@ -13,12 +13,16 @@ namespace Sift.CLI.Extensions
         public static IServiceCollection AddServices(this IServiceCollection serviceCollection)
         {
             serviceCollection.AddSingleton<App>();        
+            serviceCollection.AddSingleton<EventScheduler>();
+            serviceCollection.AddSingleton<SpatialPropagator>();
+            serviceCollection.AddSingleton<NodeFactory>();
+            serviceCollection.AddSingleton<ComponentEventArgsFactory>();
             
             serviceCollection.AddScoped<NodeBus>();
-            serviceCollection.AddScoped<NodeFactory>();
             serviceCollection.AddScoped<Port>();
             serviceCollection.AddScoped<Sequence>();
             serviceCollection.AddScoped<Sequencer>();
+            serviceCollection.AddScoped<ComponentEventArgs>();
 
             serviceCollection.AddScoped<IKeyEventService<ConsoleKey>, ConsoleKeyEventService>();
 

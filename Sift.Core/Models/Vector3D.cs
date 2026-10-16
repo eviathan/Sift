@@ -1,3 +1,5 @@
+using Sift.Core.Enums;
+
 namespace Sift.Core.Grid
 {
     public struct Vector3D : IEquatable<Vector3D>
@@ -34,6 +36,7 @@ namespace Sift.Core.Grid
         {
             return $"({X}, {Y}, {Z})";
         }
+        
 
         public static Vector3D operator +(Vector3D a, Vector3D b) =>
             new(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
@@ -42,5 +45,21 @@ namespace Sift.Core.Grid
             b != 1
                 ? new(a.X * b, a.Y * b, a.Z * b)
                 : a;
+
+        public static bool operator ==(Vector3D left, Vector3D right) =>
+            left.Equals(right);
+        
+        public static bool operator !=(Vector3D left, Vector3D right) =>
+            !left.Equals(right);
+
+        public override bool Equals(object obj)
+        {
+            return obj is Vector3D && Equals((Vector3D)obj);
+        }
+
+        internal Vector3D Step(Direction direction)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

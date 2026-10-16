@@ -13,16 +13,14 @@ namespace Sift.Core.Components
             _directions = directions;
         }
 
-        public async Task InvokeAsync(NodeEventArgs e)
+        public async Task InvokeAsync(ComponentEventArgs args, CancellationToken cancellationToken)
         {
             foreach (var direction in _directions)
             {
-                Console.WriteLine($"Emit: Node:({e.Node.Position})_Direction:({direction})");
+                Console.WriteLine($"Emit: Node:({args.Node.Position})_Direction:({direction})");
 
                 var vector = direction.Key * (direction.Value ?? 1);
             }
-
-            return;
         }
     }
 }

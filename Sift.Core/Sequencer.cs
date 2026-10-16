@@ -1,26 +1,31 @@
 using System.Diagnostics;
 using Sift.Core.MIDI;
+using Sift.Core.Models.Nodes;
 
 namespace Sift.Core
 {
     public class Sequencer : IDisposable
     {
-        public bool IsPlaying { get; private set; }
-        public DateTime StartTime { get; private set; }
-        public UInt64 TickCount { get; private set; }
-
         private const int BUSY_WAITING_TIMEOUT_IN_MS = 1;
         private const int TICKS_PER_CROTCHET = 96;
+
+        private readonly EventScheduler _eventScheduler;
 
         private Sequence _sequence { get; set; }
         private Stopwatch _stopwatch { get; set; } = new();
         private Task _sequenceTask;
         private CancellationTokenSource _cancellationTokenSource = new();
         private MIDIService _midiService;
+        public bool IsPlaying { get; private set; }
+        public DateTime StartTime { get; private set; }
+        public UInt64 TickCount { get; private set; }
 
-        public Sequencer(Sequence sequence)
+
+        public Sequencer(Sequence sequence, EventScheduler eventScheduler)
         {
-            _sequence = sequence;
+            _sequence = sequence ?? throw new ArgumentNullException(nameof(sequence));
+            _eventScheduler = eventScheduler ?? throw new ArgumentNullException(nameof(eventScheduler));
+
             _midiService = MIDIService.Instance;
             _sequenceTask = Task.Run(ExecuteSequence, _cancellationTokenSource.Token);
         }
@@ -39,6 +44,8 @@ namespace Sift.Core
 
             IsPlaying = true;
             StartTime = DateTime.Now;
+
+            BuildEventSchedule();
 
             _stopwatch.Restart();
         }
@@ -62,18 +69,23 @@ namespace Sift.Core
                     continue;
                 }
 
-                var crotchetLengthInMilliseconds = 60000.0 / _sequence.Tempo;
-
-                var targetTick = (UInt64)(_stopwatch.Elapsed.TotalMilliseconds / crotchetLengthInMilliseconds * TICKS_PER_CROTCHET);
-
-                while (IsPlaying && TickCount < targetTick)
-                {
+                while (IsPlaying)
+                { 
                     _sequence.Update(TickCount);
                     TickCount++;
                 }
 
                 Thread.Sleep(BUSY_WAITING_TIMEOUT_IN_MS);
             }
+        }
+
+        private void BuildEventSchedule()
+        {
+            // _eventScheduler.Schedule(new NodeEvent
+            // { 
+            //     Id = Guid.NewGuid(),
+            //     DueTime = 100
+            // });
         }
     }
 }

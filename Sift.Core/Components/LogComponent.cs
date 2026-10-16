@@ -5,9 +5,14 @@ namespace Sift.Core.Components
 {
     public class LogComponent : IComponent, IListener
     {
-        public async Task OnReceivedAsync(NodeEventArgs e)
+        public async Task InvokeAsync(ComponentEventArgs args, CancellationToken cancellationToken)
         {
-            Console.WriteLine($"LogNodeEvent Invocation: {e.Node.Position.X}_{e.Node.Position.Y}_{e.Node.Position.Z}");
+            Console.WriteLine($"LogNodeEvent Invocation: {args.Node.Position.X}_{args.Node.Position.Y}_{args.Node.Position.Z}");
+        }
+
+        public Task OnReceivedAsync(ComponentEventArgs e)
+        {
+            throw new NotImplementedException();
         }
     }
 }

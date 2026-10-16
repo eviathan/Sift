@@ -10,7 +10,7 @@ namespace Sift.Core.Models
             readonly get => _numerator;
             set
             {
-                if(value <= MAX_VALUE && value >= 0)
+                if(value <= MAX_VALUE && value > 0)
                     _numerator = value;
                 else
                     throw new ArgumentOutOfRangeException();
@@ -23,7 +23,7 @@ namespace Sift.Core.Models
             readonly get => _denominator;
             set
             {
-                if(value <= MAX_VALUE && value >= 0)
+                if(value <= MAX_VALUE && value > 0)
                     _denominator = value;
                 else
                     throw new ArgumentOutOfRangeException();
