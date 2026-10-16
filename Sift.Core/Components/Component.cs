@@ -14,8 +14,11 @@ namespace Sift.Core.Components
 
         public void Configure(IComponentConfig config)
         {
-            Config = config as TConfig
+            var typedConfig = config as TConfig
                 ?? throw new ArgumentException($"{GetType().Name} expects {typeof(TConfig).Name} but got {config?.GetType().Name ?? "null"}.", nameof(config));
+
+            typedConfig.Validate();
+            Config = typedConfig;
         }
 
         public abstract Task InvokeAsync(ComponentContext context, CancellationToken cancellationToken);

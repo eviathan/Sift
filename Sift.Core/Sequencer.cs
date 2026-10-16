@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using Sift.Core.MIDI;
+using Sift.Core.Interfaces;
 
 namespace Sift.Core
 {
@@ -14,7 +14,7 @@ namespace Sift.Core
 
         private readonly Sequence _sequence;
         private readonly SequencerRuntime _runtime;
-        private readonly MIDIService _midiService;
+        private readonly IMidiOutput _midiOutput;
 
         // NOTE: Guards Play/Stop and the clock's position so a restart can never be advanced with a stale position
         private readonly object _sync = new();
@@ -32,12 +32,12 @@ namespace Sift.Core
 
         public double TicksPerSecond => _sequence.Tempo / 60.0 * Time.TicksPerQuarterNote;
 
-        public Sequencer(Sequence sequence, SequencerRuntime runtime)
+        public Sequencer(Sequence sequence, SequencerRuntime runtime, IMidiOutput midiOutput)
         {
             _sequence = sequence ?? throw new ArgumentNullException(nameof(sequence));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
 
-            _midiService = MIDIService.Instance;
+            _midiOutput = midiOutput ?? throw new ArgumentNullException(nameof(midiOutput));
 
             _clockThread = new Thread(RunClock)
             {
@@ -87,7 +87,8 @@ namespace Sift.Core
                 Volatile.Write(ref _position, 0);
             }
 
-            _midiService.KillAllNotes();
+            // NOTE: Cancelled MIDI components send their own note offs, this catches anything left hanging
+            _midiOutput.AllNotesOff();
         }
 
         private void RunClock()

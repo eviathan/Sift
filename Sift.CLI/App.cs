@@ -1,7 +1,6 @@
 using Sift.Logging;
 using Sift.Core;
 using Sift.Services;
-using Sift.Core.MIDI;
 using Microsoft.Extensions.Logging;
 using Sift.Core.Factories;
 
@@ -35,9 +34,6 @@ namespace Sift.CLI
             RegisterKeyEvents();
 
             DemoScene.Build(Sequence, _componentFactory);
-
-            // TODO: Add this back when working with MIDI
-            // await MIDIService.Instance.OpenOutput();
         }
 
         public void Update()

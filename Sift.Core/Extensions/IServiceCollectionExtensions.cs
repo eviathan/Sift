@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Sift.Core.Components;
 using Sift.Core.Factories;
+using Sift.Core.Interfaces;
+using Sift.Core.MIDI;
 
 namespace Sift.Core.Extensions
 {
@@ -15,6 +17,7 @@ namespace Sift.Core.Extensions
             serviceCollection.AddSingleton<SpatialPropagator>();
             serviceCollection.AddSingleton<ComponentRegistry>();
             serviceCollection.AddSingleton<ComponentFactory>();
+            serviceCollection.AddSingleton<IMidiOutput, DryWetMidiOutput>();
 
             return serviceCollection;
         }
