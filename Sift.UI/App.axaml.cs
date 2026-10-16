@@ -51,15 +51,9 @@ namespace Sift.UI
             KeyEventService.RegisterKeyEvent(Key.Space, () =>
             {
                 if (Sequencer.IsPlaying)
-                {
-                    Sequence.Deinitialise();
                     Sequencer.Stop();
-                }
                 else
-                {
-                    Sequence.Initialise();
                     Sequencer.Play();
-                }
             });
         }
     }

@@ -1,4 +1,5 @@
 using Sift.Core.Enums;
+using Sift.Core.Extensions;
 
 namespace Sift.Core.Grid
 {
@@ -57,9 +58,7 @@ namespace Sift.Core.Grid
             return obj is Vector3D && Equals((Vector3D)obj);
         }
 
-        internal Vector3D Step(Direction direction)
-        {
-            throw new NotImplementedException();
-        }
+        internal Vector3D Step(Direction direction) =>
+            this + direction.ToVector();
     }
 }

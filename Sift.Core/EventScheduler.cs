@@ -7,15 +7,16 @@ namespace Sift.Core
     public class EventScheduler
     {
         private readonly PriorityQueue<NodeEvent, (long Ticks, long Order)> _queue = new();
-        private long _nextId;
         private long _nextOrder;
 
-        public Guid Schedule(Time dueTime, Message message, Guid targetNodeId, Direction targetPortDirection)
+        public int Count => _queue.Count;
+
+        public Guid Schedule(Time dueTime, Message message, Guid? targetNodeId, Direction? targetPortDirection, Guid? inFlightId = null, int inFlightVersion = 0)
         {
             var id = Guid.NewGuid();
             var order = ++_nextOrder;
 
-            var nodeEvent = new NodeEvent(id, dueTime, message, targetNodeId, targetPortDirection, order);
+            var nodeEvent = new NodeEvent(id, dueTime, message, targetNodeId, targetPortDirection, order, inFlightId, inFlightVersion);
 
             _queue.Enqueue(nodeEvent, (dueTime.Ticks, order));
 
@@ -33,5 +34,8 @@ namespace Sift.Core
             nodeEvent = null;
             return false;
         }
+
+        public void Clear() =>
+            _queue.Clear();
     }
 }

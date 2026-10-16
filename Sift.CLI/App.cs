@@ -3,6 +3,7 @@ using Sift.Core;
 using Sift.Services;
 using Sift.Core.MIDI;
 using Microsoft.Extensions.Logging;
+using Sift.Core.Factories;
 
 namespace Sift.CLI
 {
@@ -15,12 +16,15 @@ namespace Sift.CLI
         public readonly Sequencer Sequencer;
         public readonly IKeyEventService<ConsoleKey> KeyEventService;
 
-        public App(ILogger<App> logger, Sequence sequence, Sequencer sequencer, IKeyEventService<ConsoleKey> keyEventService)
+        private readonly ComponentFactory _componentFactory;
+
+        public App(ILogger<App> logger, Sequence sequence, Sequencer sequencer, IKeyEventService<ConsoleKey> keyEventService, ComponentFactory componentFactory)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             Sequence = sequence ?? throw new ArgumentNullException(nameof(sequence));
             Sequencer = sequencer ?? throw new ArgumentNullException(nameof(sequencer));
             KeyEventService = keyEventService ?? throw new ArgumentNullException(nameof(keyEventService));
+            _componentFactory = componentFactory ?? throw new ArgumentNullException(nameof(componentFactory));
         }
 
         public async Task Init()
@@ -29,6 +33,8 @@ namespace Sift.CLI
             _logger.LogInformation("Press 'Q' to quit, do'Spacebar' to start/stop the sequence.");
 
             RegisterKeyEvents();
+
+            DemoScene.Build(Sequence, _componentFactory);
 
             // TODO: Add this back when working with MIDI
             // await MIDIService.Instance.OpenOutput();
@@ -48,22 +54,16 @@ namespace Sift.CLI
             KeyEventService.RegisterKeyEvent(ConsoleKey.Spacebar, () =>
             {
                 if (Sequencer.IsPlaying)
-                {
-                    Sequence.Deinitialise();
                     Sequencer.Stop();
-                }
                 else
-                {
-                    Sequence.Initialise();
                     Sequencer.Play();
-                }
             });
 
             KeyEventService.RegisterKeyEvent(ConsoleKey.Q, () =>
             {
                 _logger.LogInformation("Quitting the application...");
                 
-                MIDIService.Instance.KillAllNotes();
+                Sequencer.Dispose();
                 IsRunning = false;
             });
         }

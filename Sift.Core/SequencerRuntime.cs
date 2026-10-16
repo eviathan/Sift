@@ -1,89 +1,405 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Sift.Core.Enums;
-using Sift.Core.Factories;
+using Sift.Core.Interfaces;
 using Sift.Core.Models;
 using Sift.Core.Models.Nodes;
 using Sift.Core.Nodes;
 
 namespace Sift.Core
 {
-    public class SequencerRuntime
+    // NOTE: Owns virtual time. Nothing in here knows about the wall clock, the Sequencer drives it via AdvanceTo.
+    // Runtime state is only touched under _sync (the clock thread while playing), everything else submits to _pending
+    public class SequencerRuntime : ISequencerContext
     {
+        private const int STOP_TIMEOUT_IN_MS = 500;
+
         private readonly ILogger<SequencerRuntime> _logger;
-        private readonly Grid<Node> _grid;
+        private readonly Sequence _sequence;
         private readonly EventScheduler _scheduler;
         private readonly SpatialPropagator _spatialPropagator;
-        private readonly ComponentEventArgsFactory _componentEventArgFactory;
 
-        private CancellationTokenSource _playbackCancellationoTokenSources;
-        private readonly List<Task> _activeComponentTasks = new();
-        private Time _currentTime = new(0);
-        private long _ticksPerCell = 240;
+        private readonly object _sync = new();
+        private readonly ConcurrentQueue<PendingItem> _pending = new();
+        private readonly Dictionary<Guid, InFlightMessage> _inFlight = [];
+        private readonly Stack<IGridCommand> _undo = new();
+        private readonly Stack<IGridCommand> _redo = new();
 
-        public SequencerRuntime(ILogger<SequencerRuntime> logger, Grid<Node> grid, EventScheduler scheduler, SpatialPropagator spatialPropagator, ComponentEventArgsFactory componentEventArgFactory)
+        // NOTE: Components are fire and forget by design, some loop and need to run concurrently
+        private readonly ConcurrentDictionary<Task, byte> _activeComponentTasks = new();
+        private CancellationTokenSource _playbackCancellationTokenSource = new();
+
+        private long _currentTicks;
+        private volatile bool _isRunning;
+
+        public Time Now => new(Volatile.Read(ref _currentTicks));
+
+        public bool IsRunning => _isRunning;
+
+        private Time CurrentTime
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _grid = grid ?? throw new ArgumentNullException(nameof(grid));
-            _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
-            _spatialPropagator = spatialPropagator ?? throw new ArgumentNullException(nameof(spatialPropagator));
-            _componentEventArgFactory = componentEventArgFactory ?? throw new ArgumentNullException(nameof(componentEventArgFactory));
-
-            _playbackCancellationoTokenSources = new CancellationTokenSource();
+            get => new(_currentTicks);
+            set => Volatile.Write(ref _currentTicks, value.Ticks);
         }
 
-        public void EmitMessage(Guid sourceNodeId, Direction portDirection, Message message)
+        public SequencerRuntime(ILogger<SequencerRuntime> logger, Sequence sequence, EventScheduler scheduler, SpatialPropagator spatialPropagator)
         {
-            if(!_grid.TryGetNode(sourceNodeId, out var node))
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _sequence = sequence ?? throw new ArgumentNullException(nameof(sequence));
+            _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
+            _spatialPropagator = spatialPropagator ?? throw new ArgumentNullException(nameof(spatialPropagator));
+        }
+
+        public void Start()
+        {
+            lock (_sync)
+            {
+                if (_isRunning)
+                    return;
+
+                Reset();
+
+                // NOTE: Applies edits submitted while stopped and drops any stale emits
+                Drain();
+
+                _playbackCancellationTokenSource.Dispose();
+                _playbackCancellationTokenSource = new CancellationTokenSource();
+                _isRunning = true;
+
+                var playNodes = _sequence.Grid.Values.Where(x => x.EmitOnPlay && x.IsActive).ToList();
+
+                foreach (var node in playNodes)
+                    _scheduler.Schedule(CurrentTime, new Message { Payload = "play" }, node.Id, null);
+            }
+        }
+
+        public void Stop()
+        {
+            Task[] runningTasks;
+
+            lock (_sync)
+            {
+                if (!_isRunning)
+                    return;
+
+                _isRunning = false;
+                _playbackCancellationTokenSource.Cancel();
+                runningTasks = _activeComponentTasks.Keys.ToArray();
+
+                Reset();
+            }
+
+            // NOTE: Wait outside the lock, components may still be submitting as they wind down
+            try
+            {
+                if (!Task.WhenAll(runningTasks).Wait(STOP_TIMEOUT_IN_MS))
+                    _logger.LogWarning($"{runningTasks.Count(x => !x.IsCompleted)} component(s) did not stop within {STOP_TIMEOUT_IN_MS}ms of cancellation.");
+            }
+            catch (AggregateException)
+            {
+                // NOTE: Faults are logged as each task completes, cancellations are expected
+            }
+        }
+
+        public void Emit(Guid sourceNodeId, Direction direction, Message message, Time? at = null)
+        {
+            ArgumentNullException.ThrowIfNull(message);
+
+            _pending.Enqueue(new PendingEmit(sourceNodeId, direction, message, at ?? Now));
+        }
+
+        // NOTE: For the user (UI/CLI). Recorded for undo. Applied immediately when stopped, at the next tick when playing
+        public Task Submit(IGridCommand command) =>
+            Enqueue(command, CommandSource.User);
+
+        Task ISequencerContext.Submit(IGridCommand command) =>
+            Enqueue(command, CommandSource.Component);
+
+        public Task<bool> Undo() =>
+            EnqueueHistory(isUndo: true);
+
+        public Task<bool> Redo() =>
+            EnqueueHistory(isUndo: false);
+
+        public void AdvanceTo(Time targetTime)
+        {
+            lock (_sync)
+            {
+                if (!_isRunning)
+                    return;
+
+                while (true)
+                {
+                    Drain();
+
+                    while (_scheduler.TryDequeueDue(CurrentTime, out var evt))
+                        Dispatch(evt!);
+
+                    if (CurrentTime.Ticks >= targetTime.Ticks)
+                        break;
+
+                    CurrentTime += 1;
+                }
+            }
+        }
+
+        private Task Enqueue(IGridCommand command, CommandSource source)
+        {
+            ArgumentNullException.ThrowIfNull(command);
+
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _pending.Enqueue(new PendingCommand(command, source, completion));
+
+            DrainIfStopped();
+
+            return completion.Task;
+        }
+
+        private Task<bool> EnqueueHistory(bool isUndo)
+        {
+            var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _pending.Enqueue(new PendingHistory(isUndo, completion));
+
+            DrainIfStopped();
+
+            return completion.Task;
+        }
+
+        private void DrainIfStopped()
+        {
+            if (_isRunning)
                 return;
 
-            _logger.LogInformation($"[Tick {_currentTime.Ticks}] Node {sourceNodeId} emitting '{message.Payload}' via {portDirection}");
-
-            if (_spatialPropagator.TryRaycast(node.Position, portDirection, _ticksPerCell, _currentTime, out var result))
+            lock (_sync)
             {
-                _scheduler.Schedule(new Time(result.ArrivalTicks), message, result.NodeId, result.PortDirection);
-                
-                _logger.LogInformation($" -> Raycast hit Node {result.NodeId} at distance {result.Distance} cells. Scheduled arrival for Tick {result.ArrivalTicks}.");
+                if (!_isRunning)
+                    Drain();
+            }
+        }
+
+        private void Drain()
+        {
+            var spaceChanged = false;
+
+            while (_pending.TryDequeue(out var item))
+            {
+                switch (item)
+                {
+                    case PendingEmit emit:
+                        if (_isRunning)
+                            Launch(emit);
+                        break;
+
+                    case PendingCommand command:
+                        spaceChanged |= ApplyCommand(command);
+                        break;
+
+                    case PendingHistory history:
+                        spaceChanged |= ApplyHistory(history);
+                        break;
+                }
+            }
+
+            if (spaceChanged)
+            {
+                foreach (var message in _inFlight.Values)
+                    Resolve(message);
+            }
+        }
+
+        private bool ApplyCommand(PendingCommand pending)
+        {
+            if (pending.Source == CommandSource.Component && !_isRunning)
+            {
+                pending.Completion.TrySetCanceled();
+                return false;
+            }
+
+            try
+            {
+                var inverse = pending.Command.Apply(_sequence.Grid);
+
+                if (pending.Source == CommandSource.User)
+                {
+                    _undo.Push(inverse);
+                    _redo.Clear();
+                }
+
+                pending.Completion.TrySetResult();
+                return pending.Command.AffectsSpace;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"[Tick {CurrentTime.Ticks}] {pending.Source} command {pending.Command.GetType().Name} rejected: {ex.Message}");
+                pending.Completion.TrySetException(ex);
+                return false;
+            }
+        }
+
+        private bool ApplyHistory(PendingHistory pending)
+        {
+            var (from, to) = pending.IsUndo ? (_undo, _redo) : (_redo, _undo);
+
+            if (!from.TryPop(out var command))
+            {
+                pending.Completion.TrySetResult(false);
+                return false;
+            }
+
+            try
+            {
+                to.Push(command.Apply(_sequence.Grid));
+                pending.Completion.TrySetResult(true);
+                return command.AffectsSpace;
+            }
+            catch (Exception ex)
+            {
+                // NOTE: The grid has moved on (e.g. a component changed it) so this entry can no longer be applied, drop it
+                _logger.LogWarning($"[Tick {CurrentTime.Ticks}] {(pending.IsUndo ? "Undo" : "Redo")} of {command.GetType().Name} failed: {ex.Message}");
+                pending.Completion.TrySetException(ex);
+                return false;
+            }
+        }
+
+        private void Launch(PendingEmit emit)
+        {
+            if (!_sequence.Grid.TryGetNode(emit.SourceNodeId, out var node))
+                return;
+
+            var message = new InFlightMessage(emit.SourceNodeId, node.Position, emit.Direction, emit.EmitTime, _sequence.TicksPerCell, emit.Message);
+            _inFlight[message.Id] = message;
+
+            _logger.LogInformation($"[Tick {emit.EmitTime.Ticks}] Node {emit.SourceNodeId} emitting '{emit.Message.Payload}' via {emit.Direction}");
+
+            Resolve(message);
+        }
+
+        // NOTE: Finds the first node ahead of where the message currently is and (re)schedules its arrival
+        private void Resolve(InFlightMessage message)
+        {
+            var travelledTicks = CurrentTime.Ticks - message.EmitTime.Ticks;
+            var minDistance = (int)Math.Clamp((travelledTicks + message.TicksPerCell - 1) / message.TicksPerCell, 1, SpatialPropagator.MAX_RAYCAST_DISTANCE + 1);
+
+            Guid? targetNodeId = null;
+            var distance = SpatialPropagator.MAX_RAYCAST_DISTANCE;
+
+            if (_spatialPropagator.TryRaycast(_sequence.Grid, message.Origin, message.Direction, message.TicksPerCell, message.EmitTime, out var result, minDistance))
+            {
+                targetNodeId = result.NodeId;
+                distance = result.Distance;
+            }
+
+            var isRetarget = message.Version > 0;
+
+            if (isRetarget && targetNodeId == message.TargetNodeId && distance == message.Distance)
+                return;
+
+            message.TargetNodeId = targetNodeId;
+            message.Distance = distance;
+            message.ArrivalTime = message.EmitTime + checked(distance * message.TicksPerCell);
+            message.Version++;
+
+            _scheduler.Schedule(message.ArrivalTime, message.Message, targetNodeId, message.TargetPortDirection, message.Id, message.Version);
+
+            var prefix = isRetarget ? $"[Tick {CurrentTime.Ticks}] Message {message.Id} retargeted" : " ->";
+
+            if (targetNodeId != null)
+                _logger.LogInformation($"{prefix} Raycast hit Node {targetNodeId} at distance {distance} cells. Scheduled arrival for Tick {message.ArrivalTime.Ticks}.");
+            else
+                _logger.LogInformation($"{prefix} Raycast hit nothing in space. Message will dissipate at Tick {message.ArrivalTime.Ticks}.");
+        }
+
+        private void Dispatch(NodeEvent nodeEvent)
+        {
+            if (nodeEvent.InFlightId is { } inFlightId)
+            {
+                // NOTE: Stale arrival, the message was retargeted after this was scheduled
+                if (!_inFlight.TryGetValue(inFlightId, out var message) || message.Version != nodeEvent.InFlightVersion)
+                    return;
+
+                _inFlight.Remove(inFlightId);
+            }
+
+            if (nodeEvent.TargetNodeId is not { } targetNodeId)
+            {
+                _logger.LogInformation($"[Tick {CurrentTime.Ticks}] Message '{nodeEvent.Message.Payload}' dissipated.");
+                return;
+            }
+
+            if (!_sequence.Grid.TryGetNode(targetNodeId, out var node))
+                return;
+
+            var isPlay = nodeEvent.TargetPortDirection == null;
+
+            _logger.LogInformation($"[Tick {CurrentTime.Ticks}] Dispatching '{nodeEvent.Message.Payload}' to Node {targetNodeId} {(isPlay ? "all ports (play)" : $"Port {nodeEvent.TargetPortDirection}")}");
+
+            if (nodeEvent.TargetPortDirection is { } direction)
+            {
+                InvokePort(node, direction, isPlay, nodeEvent.Message);
             }
             else
             {
-                _logger.LogInformation(" -> Raycast hit nothing in space. Message dissipated.");
+                foreach (var portDirection in node.Bus.Keys)
+                    InvokePort(node, portDirection, isPlay, nodeEvent.Message);
             }
         }
 
-        public async Task AdvanceTo(Time targetTime)
+        private void InvokePort(Node node, Direction direction, bool isPlay, Message message)
         {
-            while (_currentTime.Ticks <= targetTime.Ticks)
+            // NOTE: Dispatch on the current tick rather than DueTime so late events never move time backwards
+            var context = new ComponentContext(node, direction, isPlay, message, CurrentTime, this);
+
+            foreach (var component in node.GetPort(direction).Components)
             {
-                while (_scheduler.TryDequeueDue(_currentTime, out var evt))
+                try
                 {
-                    await DispatchAsync(evt!);
+                    Track(component.InvokeAsync(context, _playbackCancellationTokenSource.Token), component, node, direction);
                 }
-
-                if (_currentTime.Ticks == targetTime.Ticks)
-                    break;
-
-                _currentTime = new Time(_currentTime.Ticks + 1);
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Component {component.GetType().Name} on Node {node.Id} Port {direction} threw during dispatch.");
+                }
             }
         }
 
-        private async Task DispatchAsync(NodeEvent nodeEvent)
+        private void Track(Task task, IComponent component, Node node, Direction direction)
         {
-            _currentTime = nodeEvent.DueTime;
-
-            if(!_grid.TryGetNode(nodeEvent.TargetNodeId, out var node))
-                return;
-                
-            var port = node.GetPort(nodeEvent.TargetPortDirection);
-
-            _logger.LogInformation($"[Tick {_currentTime.Ticks}] Dispatching '{nodeEvent.Message.Payload}' to Node {nodeEvent.TargetNodeId} Port {nodeEvent.TargetPortDirection}");
-
-            foreach (var component in port.Components)
+            if (task.IsCompleted)
             {
-                var eventArgs = _componentEventArgFactory.Create(node);
-
-                var task = component.InvokeAsync(eventArgs, _playbackCancellationoTokenSources.Token);
-                _activeComponentTasks.Add(task);
+                LogIfFaulted(task, component, node, direction);
+                return;
             }
+
+            _activeComponentTasks.TryAdd(task, 0);
+
+            task.ContinueWith(completed =>
+            {
+                _activeComponentTasks.TryRemove(completed, out _);
+                LogIfFaulted(completed, component, node, direction);
+            }, TaskScheduler.Default);
         }
+
+        private void LogIfFaulted(Task task, IComponent component, Node node, Direction direction)
+        {
+            if (task.IsFaulted)
+                _logger.LogError(task.Exception?.GetBaseException(), $"Component {component.GetType().Name} on Node {node.Id} Port {direction} faulted.");
+        }
+
+        // NOTE: Leaves _pending and undo history alone, they belong to the user's edits not the playback
+        private void Reset()
+        {
+            _scheduler.Clear();
+            _inFlight.Clear();
+            _activeComponentTasks.Clear();
+            CurrentTime = Time.Zero;
+        }
+
+        private abstract record PendingItem;
+
+        private sealed record PendingEmit(Guid SourceNodeId, Direction Direction, Message Message, Time EmitTime) : PendingItem;
+
+        private sealed record PendingCommand(IGridCommand Command, CommandSource Source, TaskCompletionSource Completion) : PendingItem;
+
+        private sealed record PendingHistory(bool IsUndo, TaskCompletionSource<bool> Completion) : PendingItem;
     }
 }

@@ -13,18 +13,17 @@ namespace Sift.Core.Models
         {
             get
             {
-                var key = new Vector3D(x, y, z);
-
-                if (_positionCache.TryGetValue(key, out var value))
+                if (_positionCache.TryGetValue(new Vector3D(x, y, z), out var value))
                     return value;
                 else
                     throw new KeyNotFoundException($"No element found at ({x}, {y}, {z}).");
             }
-            set
-            {
-                _positionCache[new Vector3D(x, y, z)] = value;
-            }
         }
+
+        public TNode GetNode(Guid id) =>
+            _idCache.TryGetValue(id, out var node)
+                ? node
+                : throw new KeyNotFoundException($"No node found with id {id}.");
 
         public bool TryGetNode(Guid id, out TNode value) =>
             _idCache.TryGetValue(id, out value!);
@@ -33,7 +32,7 @@ namespace Sift.Core.Models
             _positionCache.TryGetValue(new Vector3D(x, y, z), out value!);
 
         public bool TryGetNode(Vector3D position, out TNode value) =>
-            _positionCache.TryGetValue(new Vector3D(position.X, position.Y, position.Z), out value!);
+            _positionCache.TryGetValue(position, out value!);
 
         public bool Contains(int x, int y, int z) =>
             _positionCache.ContainsKey(new Vector3D(x, y, z));
@@ -43,7 +42,13 @@ namespace Sift.Core.Models
             if (node == null)
                 throw new ArgumentNullException("Cannot add a null node to the Grid!");
 
-            this[node.Position.X, node.Position.Y, node.Position.Z] = node;
+            if (_positionCache.ContainsKey(node.Position))
+                throw new InvalidOperationException($"A node already exists at {node.Position}.");
+
+            if (_idCache.ContainsKey(node.Id))
+                throw new InvalidOperationException($"A node with id {node.Id} already exists.");
+
+            _positionCache[node.Position] = node;
             _idCache[node.Id] = node;
         }
 
@@ -51,11 +56,39 @@ namespace Sift.Core.Models
         {
             var node = this[x, y, z];
 
-            _idCache.Remove(node.Id);            
+            _idCache.Remove(node.Id);
             _positionCache.Remove(node.Position);
         }
 
-        public void Clear() => _positionCache.Clear();
+        public bool Remove(Guid id, out TNode node)
+        {
+            if (!_idCache.Remove(id, out node!))
+                return false;
+
+            _positionCache.Remove(node.Position);
+            return true;
+        }
+
+        public void Move(Guid id, Vector3D position)
+        {
+            var node = GetNode(id);
+
+            if (node.Position == position)
+                return;
+
+            if (_positionCache.ContainsKey(position))
+                throw new InvalidOperationException($"A node already exists at {position}.");
+
+            _positionCache.Remove(node.Position);
+            node.Position = position;
+            _positionCache[position] = node;
+        }
+
+        public void Clear()
+        {
+            _positionCache.Clear();
+            _idCache.Clear();
+        }
 
         public int Count => _positionCache.Count;
 

@@ -4,7 +4,7 @@ namespace Sift.Core.Models
     {
         private const int MAX_VALUE = 1024;
 
-        public int _numerator;
+        private int _numerator;
         public int Numerator 
         {
             readonly get => _numerator;
@@ -35,5 +35,9 @@ namespace Sift.Core.Models
             Numerator = numerator;
             Denominator = denominator;
         }
+
+        // NOTE: A cell is Numerator/Denominator of a whole note, e.g. 1/4 at 96 PPQN is 96 ticks
+        public readonly long ToTicks() =>
+            Math.Max(1, (long)Time.TicksPerQuarterNote * 4 * Numerator / Denominator);
     }
 }

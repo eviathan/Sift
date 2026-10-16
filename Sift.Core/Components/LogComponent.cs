@@ -1,18 +1,29 @@
+using Microsoft.Extensions.Logging;
 using Sift.Core.Interfaces;
 using Sift.Core.Models.Nodes;
 
 namespace Sift.Core.Components
 {
-    public class LogComponent : IComponent, IListener
+    public sealed record LogConfig : IComponentConfig;
+
+    [ComponentType("log")]
+    public class LogComponent : Component<LogConfig>
     {
-        public async Task InvokeAsync(ComponentEventArgs args, CancellationToken cancellationToken)
+        private readonly ILogger<LogComponent> _logger;
+
+        public LogComponent(ILogger<LogComponent> logger)
         {
-            Console.WriteLine($"LogNodeEvent Invocation: {args.Node.Position.X}_{args.Node.Position.Y}_{args.Node.Position.Z}");
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public Task OnReceivedAsync(ComponentEventArgs e)
+        public override Task InvokeAsync(ComponentContext context, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            var trigger = context.IsPlay ? "play" : "message";
+            var name = context.Node.Name ?? context.Node.Id.ToString();
+
+            _logger.LogInformation($"[Tick {context.DispatchTime.Ticks}] {name} {context.Node.Position} received '{context.Message.Payload}' on {context.Port} ({trigger})");
+
+            return Task.CompletedTask;
         }
     }
 }

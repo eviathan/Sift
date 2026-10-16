@@ -4,6 +4,12 @@ namespace Sift.Core.Interfaces
 {
     public interface IComponent
     {
-        Task InvokeAsync(ComponentEventArgs args, CancellationToken cancellationToken);
+        Guid Id { get; }
+
+        IComponentConfig Config { get; }
+
+        void Configure(IComponentConfig config);
+
+        Task InvokeAsync(ComponentContext context, CancellationToken cancellationToken);
     }
 }

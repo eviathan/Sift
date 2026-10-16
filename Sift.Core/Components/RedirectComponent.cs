@@ -1,13 +1,19 @@
+using Sift.Core.Enums;
 using Sift.Core.Interfaces;
 using Sift.Core.Models.Nodes;
 
 namespace Sift.Core.Components
 {
-    public class RedirectComponent : IComponent
+    public sealed record RedirectConfig(Direction To) : IComponentConfig;
+
+    [ComponentType("redirect")]
+    public class RedirectComponent : Component<RedirectConfig>
     {
-        public Task InvokeAsync(ComponentEventArgs args, CancellationToken cancellationToken)
+        public override Task InvokeAsync(ComponentContext context, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            context.Sequencer.Emit(context.Node.Id, Config.To, context.Message, context.DispatchTime);
+
+            return Task.CompletedTask;
         }
     }
 }

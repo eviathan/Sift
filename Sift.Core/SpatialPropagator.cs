@@ -9,45 +9,37 @@ namespace Sift.Core
 {
     public class SpatialPropagator
     {
-        private const int MAX_RAYCAST_DISTANCE = 100;
+        public const int MAX_RAYCAST_DISTANCE = 100;
 
         private readonly ILogger<SpatialPropagator> _logger;
-        private readonly Grid<Node> _grid;
 
-        public SpatialPropagator(ILogger<SpatialPropagator> logger, Grid<Node> grid)
+        public SpatialPropagator(ILogger<SpatialPropagator> logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _grid = grid ?? throw new ArgumentNullException(nameof(grid));
         }
-        
-        public bool TryRaycast(Vector3D position, Direction direction, long ticksPerCell, Time currentTime, out RaycastResult result)
+
+        // NOTE: Takes the grid rather than owning it so it can also be used against snapshots (e.g. UI previews)
+        // minDistance skips cells a message has already travelled through
+        public bool TryRaycast(Grid<Node> grid, Vector3D position, Direction direction, long ticksPerCell, Time currentTime, out RaycastResult result, int minDistance = 1)
         {
-            var distance = 0;
-            var currentPostiion = position;
+            var currentPosition = position;
 
-            while(true)
+            for (var distance = 1; distance <= MAX_RAYCAST_DISTANCE; distance++)
             {
-                currentPostiion = currentPostiion.Step(direction);
-                distance++;
-                
-                if(_grid.TryGetNode(currentPostiion, out var node))
-                {
-                    var expectedListeningDirection = direction.Opposite();
-                    var arrivalTicks = currentTime.Ticks + checked(distance * ticksPerCell);
+                currentPosition = currentPosition.Step(direction);
 
+                if (distance >= minDistance && grid.TryGetNode(currentPosition, out var node))
+                {
                     result = new RaycastResult
                     {
                         NodeId = node.Id,
-                        PortDirection = expectedListeningDirection,
+                        PortDirection = direction.Opposite(),
                         Distance = distance,
-                        ArrivalTicks = arrivalTicks
+                        ArrivalTicks = currentTime.Ticks + checked(distance * ticksPerCell)
                     };
 
                     return true;
                 }
-                
-                if(distance > MAX_RAYCAST_DISTANCE)
-                    break;
             }
 
             result = default;

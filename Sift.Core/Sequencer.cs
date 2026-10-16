@@ -1,91 +1,86 @@
 using System.Diagnostics;
 using Sift.Core.MIDI;
-using Sift.Core.Models.Nodes;
 
 namespace Sift.Core
 {
+    // NOTE: The wall clock. Converts elapsed time into ticks and drives the SequencerRuntime
+    // TODO: Phase 4, accumulate ticks so tempo changes during playback don't jump the playhead
     public class Sequencer : IDisposable
     {
-        private const int BUSY_WAITING_TIMEOUT_IN_MS = 1;
-        private const int TICKS_PER_CROTCHET = 96;
+        private const int CLOCK_INTERVAL_IN_MS = 1;
 
-        private readonly EventScheduler _eventScheduler;
+        private readonly Sequence _sequence;
+        private readonly SequencerRuntime _runtime;
+        private readonly MIDIService _midiService;
 
-        private Sequence _sequence { get; set; }
-        private Stopwatch _stopwatch { get; set; } = new();
-        private Task _sequenceTask;
-        private CancellationTokenSource _cancellationTokenSource = new();
-        private MIDIService _midiService;
-        public bool IsPlaying { get; private set; }
-        public DateTime StartTime { get; private set; }
-        public UInt64 TickCount { get; private set; }
+        private readonly Stopwatch _stopwatch = new();
+        // NOTE: Keeps Play/Stop atomic with the stopwatch
+        private readonly object _sync = new();
+        private readonly CancellationTokenSource _cancellationTokenSource = new();
+        private readonly Task _clockTask;
+        private volatile bool _isPlaying;
 
+        public bool IsPlaying => _isPlaying;
 
-        public Sequencer(Sequence sequence, EventScheduler eventScheduler)
+        public Sequencer(Sequence sequence, SequencerRuntime runtime)
         {
             _sequence = sequence ?? throw new ArgumentNullException(nameof(sequence));
-            _eventScheduler = eventScheduler ?? throw new ArgumentNullException(nameof(eventScheduler));
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
 
             _midiService = MIDIService.Instance;
-            _sequenceTask = Task.Run(ExecuteSequence, _cancellationTokenSource.Token);
+            _clockTask = Task.Run(RunClock, _cancellationTokenSource.Token);
         }
 
         public void Dispose()
         {
+            Stop();
+
             _cancellationTokenSource.Cancel();
-            _sequenceTask.Wait();
+            _clockTask.Wait();
             _cancellationTokenSource.Dispose();
         }
 
         public void Play()
         {
-            if (IsPlaying)
-                return;
+            lock (_sync)
+            {
+                if (_isPlaying)
+                    return;
 
-            IsPlaying = true;
-            StartTime = DateTime.Now;
-
-            BuildEventSchedule();
-
-            _stopwatch.Restart();
+                _runtime.Start();
+                _stopwatch.Restart();
+                _isPlaying = true;
+            }
         }
 
         public void Stop()
         {
-            IsPlaying = false;
-            TickCount = 0;
-            _stopwatch.Reset();
+            lock (_sync)
+            {
+                if (!_isPlaying)
+                    return;
+
+                _isPlaying = false;
+                _stopwatch.Reset();
+                _runtime.Stop();
+            }
 
             _midiService.KillAllNotes();
         }
 
-        private void ExecuteSequence()
+        private void RunClock()
         {
             while (!_cancellationTokenSource.Token.IsCancellationRequested)
             {
-                if (!IsPlaying)
-                {
-                    Thread.Sleep(BUSY_WAITING_TIMEOUT_IN_MS);
-                    continue;
-                }
+                // NOTE: The runtime does its own locking and ignores this once stopped
+                if (_isPlaying)
+                    _runtime.AdvanceTo(GetCurrentTick());
 
-                while (IsPlaying)
-                { 
-                    _sequence.Update(TickCount);
-                    TickCount++;
-                }
-
-                Thread.Sleep(BUSY_WAITING_TIMEOUT_IN_MS);
+                Thread.Sleep(CLOCK_INTERVAL_IN_MS);
             }
         }
 
-        private void BuildEventSchedule()
-        {
-            // _eventScheduler.Schedule(new NodeEvent
-            // { 
-            //     Id = Guid.NewGuid(),
-            //     DueTime = 100
-            // });
-        }
+        private Time GetCurrentTick() =>
+            new((long)(_stopwatch.Elapsed.TotalMinutes * _sequence.Tempo * Time.TicksPerQuarterNote));
     }
 }
