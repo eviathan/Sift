@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Sift.CLI.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Sift.CLI
 {
@@ -14,6 +15,11 @@ namespace Sift.CLI
                 .Build();
                 
             var services = new ServiceCollection();
+
+            services.AddLogging(logging =>
+            {
+                logging.AddConsole();
+            });
             
             services.AddSingleton<IConfiguration>(configuration);
             services.AddServices();

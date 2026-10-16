@@ -3,31 +3,33 @@ using Sift.Core.MIDI;
 
 namespace Sift.Core
 {
-    public class Sequencer
+    public class Sequencer : IDisposable
     {
         public bool IsPlaying { get; private set; }
         public DateTime StartTime { get; private set; }
         public UInt64 TickCount { get; private set; }
 
         private const int BUSY_WAITING_TIMEOUT_IN_MS = 1;
+        private const int TICKS_PER_CROTCHET = 96;
 
         private Sequence _sequence { get; set; }
         private Stopwatch _stopwatch { get; set; } = new();
         private Task _sequenceTask;
-        private CancellationTokenSource _cancellationTokenSource { get; set; } = new();
+        private CancellationTokenSource _cancellationTokenSource = new();
         private MIDIService _midiService;
 
         public Sequencer(Sequence sequence)
         {
             _sequence = sequence;
-            _sequenceTask = Task.Run(ExecuteSequence, _cancellationTokenSource.Token);
             _midiService = MIDIService.Instance;
+            _sequenceTask = Task.Run(ExecuteSequence, _cancellationTokenSource.Token);
         }
 
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
             _sequenceTask.Wait();
+            _cancellationTokenSource.Dispose();
         }
 
         public void Play()
@@ -38,43 +40,43 @@ namespace Sift.Core
             IsPlaying = true;
             StartTime = DateTime.Now;
 
-            _stopwatch.Reset();
-            _stopwatch.Start();
+            _stopwatch.Restart();
         }
 
         public void Stop()
         {
             IsPlaying = false;
-            TickCount = default;
+            TickCount = 0;
             _stopwatch.Reset();
-            _sequence.ResetWalker();
-            MIDIService.Instance.KillAllNotes();
+
+            _midiService.KillAllNotes();
         }
 
         private void ExecuteSequence()
         {
             while (!_cancellationTokenSource.Token.IsCancellationRequested)
             {
-                var noteHasElapased = _stopwatch.ElapsedMilliseconds >= BeatTimeInMs();
+                if (!IsPlaying)
+                {
+                    Thread.Sleep(BUSY_WAITING_TIMEOUT_IN_MS);
+                    continue;
+                }
 
-                if (IsPlaying && noteHasElapased)
+                var crotchetLengthInMilliseconds = 60000.0 / _sequence.Tempo;
+
+                var targetTick = (UInt64)(
+                    _stopwatch.Elapsed.TotalMilliseconds
+                    / crotchetLengthInMilliseconds
+                    * TICKS_PER_CROTCHET);
+
+                while (IsPlaying && TickCount < targetTick)
                 {
                     _sequence.Update(TickCount);
                     TickCount++;
-                    _stopwatch.Restart();
                 }
-                else
-                {
-                    Thread.Sleep(BUSY_WAITING_TIMEOUT_IN_MS);
-                }
-            }
-        }
 
-        private double BeatTimeInMs()
-        {
-            var crotchetBeatLengthInMs = 60000.0 / _sequence.Tempo;
-            double semiquaverLengthInMs = crotchetBeatLengthInMs / 4;
-            return semiquaverLengthInMs;
+                Thread.Sleep(BUSY_WAITING_TIMEOUT_IN_MS);
+            }
         }
     }
 }

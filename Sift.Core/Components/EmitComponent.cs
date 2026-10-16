@@ -20,7 +20,6 @@ namespace Sift.Core.Components
                 Console.WriteLine($"Emit: Node:({e.Node.Position})_Direction:({direction})");
 
                 var vector = direction.Key * (direction.Value ?? 1);
-                e.Sequence.EnqueueWalker(e.Node, vector);
             }
 
             return;

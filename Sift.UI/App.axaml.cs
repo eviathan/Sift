@@ -24,8 +24,8 @@ namespace Sift.UI
         {
             Logger.WriteBanner("Sift v0.0.1");
 
-            Sequence = new Sequence();
-            Sequencer = new Sequencer(Sequence);
+            // Sequence = new Sequence();
+            // Sequencer = new Sequencer(Sequence);
             KeyEventService = new AvaloniaKeyEventService(Sequencer);
 
             AvaloniaXamlLoader.Load(this);
