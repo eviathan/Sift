@@ -14,5 +14,11 @@ namespace Sift.Core.Interfaces
 
         // NOTE: Applied at the start of the next tick. Dropped if playback has stopped
         Task Submit(IGridCommand command);
+
+        // NOTE: Waits in musical time so tempo changes are followed. Completes with the tick it was due on, emit 'at' that
+        // tick to stay exact. Cancelled when playback stops or the component is removed
+        Task<Time> WaitUntilAsync(Time time, CancellationToken cancellationToken);
+
+        Task<Time> WaitTicksAsync(long ticks, CancellationToken cancellationToken);
     }
 }

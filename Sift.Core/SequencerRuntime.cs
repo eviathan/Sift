@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using Sift.Core.Commands;
 using Sift.Core.Enums;
 using Sift.Core.Interfaces;
 using Sift.Core.Models;
@@ -28,6 +29,14 @@ namespace Sift.Core
         // NOTE: Components are fire and forget by design, some loop and need to run concurrently
         private readonly ConcurrentDictionary<Task, byte> _activeComponentTasks = new();
         private CancellationTokenSource _playbackCancellationTokenSource = new();
+
+        // NOTE: Per component so removing one (or its node) cancels anything it still has running
+        private readonly Dictionary<Guid, CancellationTokenSource> _componentCancellation = [];
+
+        // NOTE: Guarded separately from _sync so components can register waits without contending with the clock
+        private readonly object _waitersSync = new();
+        private readonly PriorityQueue<(TaskCompletionSource<Time> Completion, Time DueTime), (long Ticks, long Order)> _waiters = new();
+        private long _nextWaiterOrder;
 
         private long _currentTicks;
         private volatile bool _isRunning;
@@ -121,6 +130,34 @@ namespace Sift.Core
         public Task<bool> Redo() =>
             EnqueueHistory(isUndo: false);
 
+        public Task<Time> WaitTicksAsync(long ticks, CancellationToken cancellationToken) =>
+            WaitUntilAsync(Now + Math.Max(0, ticks), cancellationToken);
+
+        public Task<Time> WaitUntilAsync(Time time, CancellationToken cancellationToken)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                return Task.FromCanceled<Time>(cancellationToken);
+
+            var completion = new TaskCompletionSource<Time>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            // NOTE: Checked under the waiter lock so a wait can't slip in after Stop has cancelled the rest
+            lock (_waitersSync)
+            {
+                if (!_isRunning)
+                    return Task.FromCanceled<Time>(new CancellationToken(canceled: true));
+
+                _waiters.Enqueue((completion, time), (time.Ticks, ++_nextWaiterOrder));
+            }
+
+            if (cancellationToken.CanBeCanceled)
+            {
+                var registration = cancellationToken.Register(() => completion.TrySetCanceled(cancellationToken));
+                completion.Task.ContinueWith(_ => registration.Dispose(), TaskScheduler.Default);
+            }
+
+            return completion.Task;
+        }
+
         public void AdvanceTo(Time targetTime)
         {
             lock (_sync)
@@ -134,6 +171,8 @@ namespace Sift.Core
 
                     while (_scheduler.TryDequeueDue(CurrentTime, out var evt))
                         Dispatch(evt!);
+
+                    ReleaseWaiters();
 
                     if (CurrentTime.Ticks >= targetTime.Ticks)
                         break;
@@ -225,6 +264,7 @@ namespace Sift.Core
                     _redo.Clear();
                 }
 
+                CancelComponents(GetDetachedComponents(inverse));
                 pending.Completion.TrySetResult();
                 return pending.Command.AffectsSpace;
             }
@@ -248,7 +288,10 @@ namespace Sift.Core
 
             try
             {
-                to.Push(command.Apply(_sequence.Grid));
+                var inverse = command.Apply(_sequence.Grid);
+                to.Push(inverse);
+
+                CancelComponents(GetDetachedComponents(inverse));
                 pending.Completion.TrySetResult(true);
                 return command.AffectsSpace;
             }
@@ -271,13 +314,15 @@ namespace Sift.Core
 
             _logger.LogInformation($"[Tick {emit.EmitTime.Ticks}] Node {emit.SourceNodeId} emitting '{emit.Message.Payload}' via {emit.Direction}");
 
-            Resolve(message);
+            Resolve(message, isLaunch: true);
         }
 
         // NOTE: Finds the first node ahead of where the message currently is and (re)schedules its arrival
-        private void Resolve(InFlightMessage message)
+        private void Resolve(InFlightMessage message, bool isLaunch = false)
         {
-            var travelledTicks = CurrentTime.Ticks - message.EmitTime.Ticks;
+            // NOTE: A launch never skips cells. Concurrent components can emit for a tick the clock has already passed,
+            // that message should arrive late rather than fly straight through its target
+            var travelledTicks = isLaunch ? 0 : CurrentTime.Ticks - message.EmitTime.Ticks;
             var minDistance = (int)Math.Clamp((travelledTicks + message.TicksPerCell - 1) / message.TicksPerCell, 1, SpatialPropagator.MAX_RAYCAST_DISTANCE + 1);
 
             Guid? targetNodeId = null;
@@ -353,7 +398,7 @@ namespace Sift.Core
             {
                 try
                 {
-                    Track(component.InvokeAsync(context, _playbackCancellationTokenSource.Token), component, node, direction);
+                    Track(component.InvokeAsync(context, GetComponentToken(component)), component, node, direction);
                 }
                 catch (Exception ex)
                 {
@@ -385,12 +430,67 @@ namespace Sift.Core
                 _logger.LogError(task.Exception?.GetBaseException(), $"Component {component.GetType().Name} on Node {node.Id} Port {direction} faulted.");
         }
 
+        private void ReleaseWaiters()
+        {
+            List<(TaskCompletionSource<Time> Completion, Time DueTime)>? due = null;
+
+            lock (_waitersSync)
+            {
+                while (_waiters.TryPeek(out _, out var priority) && priority.Ticks <= CurrentTime.Ticks)
+                    (due ??= []).Add(_waiters.Dequeue());
+            }
+
+            // NOTE: Completed outside the lock, continuations run on the thread pool (RunContinuationsAsynchronously)
+            if (due != null)
+            {
+                foreach (var waiter in due)
+                    waiter.Completion.TrySetResult(waiter.DueTime);
+            }
+        }
+
+        private CancellationToken GetComponentToken(IComponent component)
+        {
+            if (!_componentCancellation.TryGetValue(component.Id, out var cancellation))
+            {
+                cancellation = CancellationTokenSource.CreateLinkedTokenSource(_playbackCancellationTokenSource.Token);
+                _componentCancellation[component.Id] = cancellation;
+            }
+
+            return cancellation.Token;
+        }
+
+        private void CancelComponents(IEnumerable<IComponent> components)
+        {
+            foreach (var component in components)
+            {
+                // NOTE: Removed so a component that is re-attached (e.g. undo) gets a fresh token on its next invocation
+                if (_componentCancellation.Remove(component.Id, out var cancellation))
+                    cancellation.Cancel();
+            }
+        }
+
+        // NOTE: A command that detaches components returns an inverse that re-attaches them
+        private static IEnumerable<IComponent> GetDetachedComponents(IGridCommand inverse) => inverse switch
+        {
+            AddNode addNode => addNode.Node.Bus.Values.SelectMany(x => x.Components).ToList(),
+            AddComponent addComponent => [addComponent.Component],
+            _ => []
+        };
+
         // NOTE: Leaves _pending and undo history alone, they belong to the user's edits not the playback
         private void Reset()
         {
             _scheduler.Clear();
             _inFlight.Clear();
             _activeComponentTasks.Clear();
+            _componentCancellation.Clear();
+
+            lock (_waitersSync)
+            {
+                while (_waiters.TryDequeue(out var waiter, out _))
+                    waiter.Completion.TrySetCanceled();
+            }
+
             CurrentTime = Time.Zero;
         }
 

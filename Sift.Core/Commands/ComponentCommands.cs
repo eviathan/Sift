@@ -19,7 +19,7 @@ namespace Sift.Core.Commands
         }
     }
 
-    // TODO: Phase 3, cancel a removed component that is still looping
+    // NOTE: The runtime cancels anything the removed component still has running
     public sealed record RemoveComponent(Guid NodeId, Direction Port, Guid ComponentId) : IGridCommand
     {
         public bool AffectsSpace => false;
