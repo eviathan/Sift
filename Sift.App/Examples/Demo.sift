@@ -1,132 +1,167 @@
 {
   "format": "sift.sequence",
   "version": 1,
-  "tempo": 120,
+  "tempo": 112,
   "quantisation": "1/16",
   "nodes": [
     {
-      "id": "9129a7f0-b42b-4188-863d-7c7e57ff5d1e",
-      "name": "Start",
+      "id": "914e88a5-18a2-45f4-a169-9372aef72bf9",
+      "name": "Clock",
       "position": [0, 0, 0],
       "active": true,
       "emitOnPlay": true,
       "ports": {
-        "up": [
-          {
-            "type": "midi",
-            "note": 72,
-            "velocity": 100,
-            "channel": 1,
-            "duration": "sixteenthNote"
-          },
-          {
-            "type": "redirect",
-            "to": "right"
-          }
-        ],
         "right": [
           {
-            "type": "emit"
+            "type": "clock",
+            "every": "quarterNote",
+            "repeats": 0
           }
         ]
       }
     },
     {
-      "id": "eeeaab29-3d79-42cc-b1d4-f1e0a6c390d2",
-      "name": "East",
+      "id": "46367759-2452-48f9-86e9-807ce6cf1539",
+      "name": "Arp",
       "position": [4, 0, 0],
       "active": true,
       "emitOnPlay": false,
       "ports": {
         "left": [
           {
-            "type": "midi",
-            "note": 60,
-            "velocity": 100,
+            "type": "notes",
+            "notes": "C4 E4 G4 B4 D5",
+            "order": "upDown",
+            "velocity": 96,
             "channel": 1,
             "duration": "sixteenthNote"
           },
           {
-            "type": "redirect",
+            "type": "divide",
+            "every": 2,
             "to": "up"
+          }
+        ]
+      }
+    },
+    {
+      "id": "23f7f468-3d96-4e6d-b642-1195bbcd6fe4",
+      "name": "Bell",
+      "position": [8, 0, 0],
+      "active": true,
+      "emitOnPlay": false,
+      "ports": {
+        "up": [
+          {
+            "type": "midi",
+            "note": 67,
+            "velocity": 80,
+            "channel": 1,
+            "duration": "eighthNote"
           },
           {
-            "type": "redirect",
+            "type": "delay",
+            "length": "eighthNote",
             "to": "forwards"
           }
         ]
       }
     },
     {
-      "id": "8b0a03d8-1679-4ed7-bfa4-f80405a0637d",
-      "name": "Low",
-      "position": [2, 2, 0],
-      "active": true,
-      "emitOnPlay": false,
-      "ports": {
-        "forwards": [
-          {
-            "type": "midi",
-            "note": 84,
-            "velocity": 100,
-            "channel": 1,
-            "duration": "eighthNote"
-          }
-        ]
-      }
-    },
-    {
-      "id": "d1912ccb-05dd-4b14-ae47-41bc16314e9c",
-      "name": "Landing",
-      "position": [7, 2, 0],
-      "active": true,
-      "emitOnPlay": false,
-      "ports": {
-        "forwards": [
-          {
-            "type": "midi",
-            "note": 79,
-            "velocity": 100,
-            "channel": 1,
-            "duration": "sixteenthNote"
-          }
-        ]
-      }
-    },
-    {
-      "id": "25f94e80-9801-4624-96e2-d0470fbe46a5",
-      "name": "West",
+      "id": "63b92694-6d2c-4d61-8b5b-778a87098295",
+      "name": "Bass",
       "position": [0, 4, 0],
       "active": true,
       "emitOnPlay": false,
       "ports": {
-        "right": [
+        "forwards": [
           {
             "type": "midi",
-            "note": 67,
+            "note": 36,
             "velocity": 100,
             "channel": 1,
-            "duration": "sixteenthNote"
-          },
-          {
-            "type": "redirect",
-            "to": "down"
+            "duration": "quarterNote"
           }
         ]
       }
     },
     {
-      "id": "ecbfff00-4646-4faf-97ff-12b338519f39",
-      "name": "North",
+      "id": "b275a022-6d30-4277-a221-7b71329aa7ca",
+      "name": "Chords",
       "position": [4, 4, 0],
       "active": true,
       "emitOnPlay": false,
       "ports": {
         "down": [
           {
+            "type": "chord",
+            "root": 48,
+            "quality": "major7",
+            "inversion": 1,
+            "velocity": 70,
+            "channel": 1,
+            "duration": "halfNote"
+          },
+          {
+            "type": "chance",
+            "percent": 60,
+            "to": "right"
+          }
+        ]
+      }
+    },
+    {
+      "id": "b94aac8d-a5fb-4789-b2b1-563bb3984014",
+      "name": "Octave",
+      "position": [8, 4, 0],
+      "active": true,
+      "emitOnPlay": false,
+      "ports": {
+        "left": [
+          {
+            "type": "transpose",
+            "semitones": 12,
+            "to": "down"
+          }
+        ]
+      }
+    },
+    {
+      "id": "b585a9fc-19dc-458e-b1c4-be02efe5f7ec",
+      "name": "Walker",
+      "position": [3, 0, 1],
+      "active": true,
+      "emitOnPlay": false,
+      "ports": {
+        "right": [
+          {
+            "type": "move",
+            "direction": "up",
+            "distance": 1
+          },
+          {
             "type": "midi",
-            "note": 64,
-            "velocity": 100,
+            "note": 72,
+            "velocity": 60,
+            "channel": 1,
+            "duration": "sixteenthNote"
+          }
+        ]
+      }
+    },
+    {
+      "id": "68b9045d-52a0-4e23-b116-e6ef590ebb0e",
+      "name": "Echo",
+      "position": [8, 0, 1],
+      "active": true,
+      "emitOnPlay": false,
+      "ports": {
+        "backwards": [
+          {
+            "type": "notes",
+            "notes": "G5 E5 C5",
+            "order": "down",
+            "velocity": 70,
             "channel": 1,
             "duration": "sixteenthNote"
           },
@@ -138,74 +173,17 @@
       }
     },
     {
-      "id": "acaefe2f-7f33-416f-b7be-19d062c8e259",
-      "name": "Lift",
-      "position": [4, 0, 1],
-      "active": true,
-      "emitOnPlay": false,
-      "ports": {
-        "backwards": [
-          {
-            "type": "midi",
-            "note": 48,
-            "velocity": 100,
-            "channel": 1,
-            "duration": "sixteenthNote"
-          },
-          {
-            "type": "redirect",
-            "to": "right"
-          }
-        ]
-      }
-    },
-    {
-      "id": "1e9102fa-12b6-46d0-90a7-6cea898d56cb",
-      "name": "Turn",
-      "position": [7, 0, 1],
-      "active": true,
-      "emitOnPlay": false,
-      "ports": {
-        "left": [
-          {
-            "type": "midi",
-            "note": 55,
-            "velocity": 100,
-            "channel": 1,
-            "duration": "sixteenthNote"
-          },
-          {
-            "type": "redirect",
-            "to": "up"
-          }
-        ]
-      }
-    },
-    {
-      "id": "b54fb7ef-0fb1-419d-bc16-69c8db792d6b",
-      "name": "Drop",
-      "position": [7, 2, 1],
-      "active": true,
-      "emitOnPlay": false,
-      "ports": {
-        "down": [
-          {
-            "type": "redirect",
-            "to": "backwards"
-          }
-        ]
-      }
-    },
-    {
-      "id": "8f62cce2-3fc1-4103-b257-7655598e3c1f",
-      "name": "High",
-      "position": [2, 2, 2],
+      "id": "8d08985c-eae8-4085-b95f-5e676957e31f",
+      "name": "Pulse",
+      "position": [0, 4, 2],
       "active": true,
       "emitOnPlay": true,
       "ports": {
         "backwards": [
           {
-            "type": "emit"
+            "type": "clock",
+            "every": "wholeNote",
+            "repeats": 0
           }
         ]
       }

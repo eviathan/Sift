@@ -105,12 +105,14 @@ namespace Sift.App
         {
             get
             {
-                if (_selectedPortNode != SelectedNodeId)
+                // NOTE: Only remembered once the node is in the scene (one just added arrives a moment later)
+                if (SelectedNode is not { } node)
+                    return Direction.Up;
+
+                if (_selectedPortNode != node.Id)
                 {
-                    _selectedPortNode = SelectedNodeId;
-                    _selectedPort = SelectedNode is { } node
-                        ? PORT_ORDER.FirstOrDefault(x => node.Ports.TryGetValue(x, out var components) && components.Count > 0, Direction.Up)
-                        : Direction.Up;
+                    _selectedPortNode = node.Id;
+                    _selectedPort = PORT_ORDER.FirstOrDefault(x => node.Ports.TryGetValue(x, out var components) && components.Count > 0, Direction.Up);
                 }
 
                 return _selectedPort;
@@ -444,7 +446,7 @@ namespace Sift.App
 
         public void SelectPort(Direction port)
         {
-            _ = SelectedPort;
+            _selectedPortNode = SelectedNodeId;
             _selectedPort = port;
             AddingToPort = null;
             MarkDirty();
@@ -860,7 +862,9 @@ namespace Sift.App
             {
                 uiChanged |= Scene.Apply(runtimeEvent);
 
-                if (runtimeEvent is NodeAdded or NodeRemoved or NodeMoved or NodeChanged)
+                // NOTE: Only the user's edits; components' edits while playing are undone when it stops
+                if (runtimeEvent is NodeAdded { Source: CommandSource.User } or NodeRemoved { Source: CommandSource.User }
+                    or NodeMoved { Source: CommandSource.User } or NodeChanged { Source: CommandSource.User })
                     IsDirty = true;
 
                 // NOTE: Cleared on the event rather than by checking the scene, a node just added isn't in it yet

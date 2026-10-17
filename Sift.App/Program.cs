@@ -16,6 +16,9 @@ using Sift.Core.Factories;
 // into a texture shown with UI.Viewport.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// NOTE: Size rows nested in rows to their content, like CSS (Paper's opt-in, it's off by default for older layouts)
+Paper.Layout.LayoutEngine.IntrinsicRowWidths = true;
+
 var services = new ServiceCollection();
 services.AddLogging(logging => logging.AddConsole().SetMinimumLevel(LogLevel.Warning));
 services.AddSiftCore();
@@ -60,6 +63,9 @@ if (Array.IndexOf(args, "--select") is var selectIndex and >= 0 && selectIndex +
 {
     var parts = args[selectIndex + 1].Split(',').Select(int.Parse).ToArray();
     host.Select(new Sift.Core.Grid.Vector3D(parts[0], parts[1], parts[2]));
+
+    if (args.Contains("--add-menu"))
+        host.ToggleAddMenu(host.SelectedPort);
 }
 
 canvas.MountCSXHotReload("src/App.csx", scopeId: "App");
