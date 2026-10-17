@@ -39,8 +39,11 @@
 
   <ItemGroup>
     <Content Include="Assets\header-glyph.png" CopyToOutputDirectory="PreserveNewest" />
-    <!-- TODO: Spot uses SF, but Paper currently drops some of its spaces, so Roboto for now -->
-    <Content Include="Assets\fonts\roboto.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <!-- NOTE: Inter (SIL OFL, see Inter-LICENSE.txt) as it's close to SF, which Spot uses. SF itself drops some spaces in
+         Paper. inter-bold is the SemiBold cut, for headings -->
+    <Content Include="Assets\fonts\inter.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\fonts\inter-bold.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\fonts\Inter-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

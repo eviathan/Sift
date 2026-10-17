@@ -1,4 +1,6 @@
+using Sift.Core.Enums;
 using Sift.Core.Interfaces;
+using Sift.Core.Models;
 using Sift.Core.Models.Nodes;
 
 namespace Sift.Core.Components
@@ -22,5 +24,9 @@ namespace Sift.Core.Components
         }
 
         public abstract Task InvokeAsync(ComponentContext context, CancellationToken cancellationToken);
+
+        // NOTE: Sends the message on: out of `to` when set, otherwise straight on. On the dispatch tick by default so it stays exact
+        protected static void Forward(ComponentContext context, Direction? to, Message? message = null, Time? at = null) =>
+            context.Sequencer.Emit(context.Node.Id, to ?? context.StraightOn, message ?? context.Message, at ?? context.DispatchTime);
     }
 }

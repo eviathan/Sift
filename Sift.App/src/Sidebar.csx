@@ -6,8 +6,17 @@ UINode Sidebar(Props _) {
   var node = host.SelectedNode;
   var content = new List<UINode>();
 
+  if (host.PendingDiscard != null) {
+    content.Add(Widgets.Section(null, new[] {
+      Widgets.Warning("Discard unsaved changes to " + host.DocumentName + "?"),
+      Widgets.HStack(
+        Widgets.Pill("Discard", () => host.ConfirmDiscard(), Sift.App.Theme.Error),
+        Widgets.Pill("Cancel", () => host.CancelDiscard())),
+    }));
+  }
+
   if (host.LastError is { } error)
-    content.Add(Widgets.Warning(error));
+    content.Add(Widgets.Section(null, new[] { Widgets.Warning(error) }));
 
   if (node != null) {
     content.AddRange(Inspector.Node(host, node));
@@ -18,10 +27,20 @@ UINode Sidebar(Props _) {
   else {
     var (minLayer, maxLayer) = host.Layers;
 
-    content.Add(Widgets.TextOf("SEQUENCE", "heading"));
-    content.Add(Widgets.BoxOf("card", new[] {
+    content.Add(Widgets.Section(null, new[] {
+      Widgets.HStack(
+        Widgets.TextOf(host.DocumentName, "title"),
+        Widgets.Spacer(),
+        host.IsDirty ? Widgets.TextOf("Edited", "badge") : UI.Box(new Paper.Core.Styles.StyleSheet())),
+      Widgets.HStack(
+        Widgets.IconTextButton(Paper.Icons.IconSets.Bs.BsFileEarmarkPlus, "New", () => host.NewSequence()),
+        Widgets.IconTextButton(Paper.Icons.IconSets.Bs.BsFolder2Open, "Open", () => host.OpenSequence()),
+        Widgets.IconTextButton(Paper.Icons.IconSets.Bs.BsDownload, "Save", () => host.Save())),
+    }));
+
+    content.Add(Widgets.Section("SEQUENCE", new[] {
       Widgets.Row("Tempo", host.Tempo.ToString() + " BPM"),
-      Widgets.Row("Grid", host.QuantisationLabel + " per cell"),
+      Widgets.FieldRow("Grid", Widgets.Cycle(host.QuantisationLabel, () => host.CycleQuantisation(-1), () => host.CycleQuantisation(1))),
       Widgets.Row("Nodes", host.Scene.Nodes.Count.ToString()),
       Widgets.Row("Layers", (maxLayer - minLayer + 1).ToString()),
     }));
@@ -34,18 +53,15 @@ UINode Sidebar(Props _) {
       layerRows.Add(Widgets.LayerRow(captured, count, captured == host.Layer, () => host.SetLayer(captured)));
     }
 
-    content.Add(Widgets.TextOf("LAYERS", "heading"));
-    content.Add(Widgets.BoxOf("card", layerRows));
+    content.Add(Widgets.Section("LAYERS", layerRows));
 
-    content.Add(Widgets.TextOf("KEYS", "heading"));
-    content.Add(Widgets.BoxOf("card", new[] {
+    content.Add(Widgets.Section("SHORTCUTS", new[] {
       Widgets.Row("Play / stop", "Space"),
       Widgets.Row("2D / layers", "Tab"),
       Widgets.Row("Layer up / down", "] / ["),
-      Widgets.Row("Add node", "Double-click"),
-      Widgets.Row("Move node", "Drag"),
-      Widgets.Row("Delete node", "Delete"),
+      Widgets.Row("Add / move node", "Double-click / drag"),
       Widgets.Row("Undo / redo", "Cmd Z / Cmd Shift Z"),
+      Widgets.Row("New / open / save", "Cmd N / O / S"),
     }));
   }
 
@@ -54,8 +70,6 @@ UINode Sidebar(Props _) {
     FlexGrow = 1f,
     Display = Paper.Core.Styles.Display.Flex,
     FlexDirection = Paper.Core.Styles.FlexDirection.Column,
-    Gap = Paper.Core.Styles.Length.Px(10),
-    Padding = new Paper.Core.Styles.Thickness(Paper.Core.Styles.Length.Px(16), Paper.Core.Styles.Length.Px(14)),
   }, content.ToArray());
 
   return Widgets.BoxOf("sidebar", new[] { scroll });

@@ -1,9 +1,10 @@
 using System.Reflection;
+using Sift.Core.Enums;
 using Sift.Core.Interfaces;
 
 namespace Sift.Core.Components
 {
-    public sealed record ComponentRegistration(string Name, Type ComponentType, Type ConfigType);
+    public sealed record ComponentRegistration(string Name, Type ComponentType, Type ConfigType, ComponentCategory Category);
 
     public class ComponentRegistry
     {
@@ -38,7 +39,7 @@ namespace Sift.Core.Components
             var configType = GetConfigType(componentType)
                 ?? throw new ArgumentException($"{componentType.Name} must derive from Component<TConfig>.");
 
-            var registration = new ComponentRegistration(attribute.Name, componentType, configType);
+            var registration = new ComponentRegistration(attribute.Name, componentType, configType, attribute.Category);
 
             if (!_byName.TryAdd(attribute.Name, registration))
                 throw new InvalidOperationException($"Component type '{attribute.Name}' is already registered.");

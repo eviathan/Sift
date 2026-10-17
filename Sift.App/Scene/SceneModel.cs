@@ -53,6 +53,10 @@ namespace Sift.App.Scene
         // NOTE: The last of the user's commands the runtime turned down, for showing in the sidebar
         public (string Message, double At, bool Expired)? LastError { get; private set; }
 
+        // NOTE: For problems outside the runtime, e.g. a file that won't open
+        public void ReportError(string message) =>
+            LastError = (message, Seconds, false);
+
         public void ExpireError()
         {
             if (LastError is { } error)
@@ -200,6 +204,10 @@ namespace Sift.App.Scene
                     LastError = (rejected.Error, now, false);
                     return true;
 
+                case SequenceReplaced:
+                    NeedsResync = true;
+                    return true;
+
                 case EventsDropped:
                     NeedsResync = true;
                     return false;
@@ -253,12 +261,7 @@ namespace Sift.App.Scene
                 foreach (var (port, components) in node.Ports)
                 {
                     foreach (var component in components)
-                    {
-                        if (component.Config is EmitConfig)
-                            directions.Add(port);
-                        else if (component.Config is RedirectConfig redirect)
-                            directions.Add(redirect.To);
-                    }
+                        directions.UnionWith(Routes.Directions(port, component.Config));
                 }
 
                 foreach (var direction in directions)

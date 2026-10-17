@@ -21,9 +21,9 @@ namespace Sift.Core.Snapshots
                     x => (IReadOnlyList<ComponentSnapshot>)x.Value.Components.Select(c => Create(c, registry)).ToList()));
 
         public static ComponentSnapshot Create(IComponent component, ComponentRegistry registry) =>
-            new(component.Id,
-                registry.TryGetByConfigType(component.Config.GetType(), out var registration) ? registration.Name : component.GetType().Name,
-                component.Config);
+            registry.TryGetByConfigType(component.Config.GetType(), out var registration)
+                ? new(component.Id, registration.Name, registration.Category, component.Config)
+                : new(component.Id, component.GetType().Name, Enums.ComponentCategory.Debug, component.Config);
 
         public static InFlightSnapshot Create(InFlightMessage message) =>
             new(message.Id,

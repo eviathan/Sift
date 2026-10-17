@@ -19,16 +19,8 @@ namespace Sift.App
             BoxOf("row", [TextOf(label, "row-label"), TextOf(value, "row-value")]);
 
         // NOTE: A component type, coloured as the grid draws it
-        public static UINode Chip(string type)
+        public static UINode Chip(string type, string colour)
         {
-            var colour = type switch
-            {
-                "midi" => Theme.Midi,
-                "emit" => Theme.Emit,
-                "redirect" => Theme.Redirect,
-                _ => Theme.Log
-            };
-
             return UI.Box(new PropsBuilder()
                 .Style(new StyleSheet
                 {
@@ -122,20 +114,21 @@ namespace Sift.App
             UI.Box(new PropsBuilder().ClassName("row").Children(TextOf(label, "row-label"), control).Build());
 
         public static UINode Stepper(string value, Action decrement, Action increment, bool canDecrement = true, bool canIncrement = true) =>
-            Spinner(value, IconSets.Bs.BsDash, decrement, IconSets.Bs.BsPlus, increment, canDecrement, canIncrement);
+            Spinner(value, IconSets.Bs.BsDash, decrement, IconSets.Bs.BsPlus, increment, canDecrement, canIncrement, 50f);
 
         // NOTE: Steps through a list of options, wrapping at the ends
-        public static UINode Cycle(string value, Action previous, Action next) =>
-            Spinner(value, IconSets.Bs.BsChevronLeft, previous, IconSets.Bs.BsChevronRight, next, true, true);
+        public static UINode Cycle(string value, Action previous, Action next, float width = 50f) =>
+            Spinner(value, IconSets.Bs.BsChevronLeft, previous, IconSets.Bs.BsChevronRight, next, true, true, width);
 
-        private static UINode Spinner(string value, IconRef down, Action onDown, IconRef up, Action onUp, bool canDown, bool canUp) =>
+        private static UINode Spinner(string value, IconRef down, Action onDown, IconRef up, Action onUp, bool canDown, bool canUp, float width) =>
             UI.Box(new StyleSheet { Display = Display.Flex, FlexDirection = FlexDirection.Row, AlignItems = AlignItems.Center, FlexShrink = 0f },
                 IconPill(down, onDown, canDown),
                 UI.Text(value, new StyleSheet
                 {
                     Color = new PaperColour(Theme.Text),
                     FontSize = Length.Px(12),
-                    MinWidth = Length.Px(64),
+                    Width = Length.Px(width),
+                    MinWidth = Length.Px(width),
                     TextAlign = TextAlign.Center,
                     FlexShrink = 0f,
                 }),
@@ -169,13 +162,14 @@ namespace Sift.App
 
         // NOTE: Edits a local draft and commits it on Enter or when focus leaves, so typing is a single undo step.
         // Give it a key that changes with the committed value so the draft resets on undo
-        public static UINode TextField(string value, Action<string> onCommit, string key) =>
-            UI.Component(TextFieldComponent, new PropsBuilder().Set("value", value).Set("onCommit", onCommit).Build(), key);
+        public static UINode TextField(string value, Action<string> onCommit, string key, bool title = false) =>
+            UI.Component(TextFieldComponent, new PropsBuilder().Set("value", value).Set("onCommit", onCommit).Set("title", title).Build(), key);
 
         private static UINode TextFieldComponent(Props props)
         {
             var value = props.Get<string>("value") ?? "";
             var onCommit = props.Get<Action<string>>("onCommit");
+            var title = props.Get<bool>("title");
             var (draft, setDraft, _) = Hooks.UseState(value);
 
             void Commit()
@@ -189,20 +183,38 @@ namespace Sift.App
                 .OnChange(setDraft)
                 .OnSubmit(Commit)
                 .OnBlur(Commit)
-                .Style(new StyleSheet
-                {
-                    Width = Length.Px(150),
-                    MinWidth = Length.Px(150),
-                    MaxWidth = Length.Px(150),
-                    FlexGrow = 0f,
-                    Height = Length.Px(24),
-                    Padding = new Thickness(Length.Px(2), Length.Px(8)),
-                    BorderRadius = 6,
-                    Background = new PaperColour("#000000").WithAlpha(0.25f),
-                    Color = new PaperColour(Theme.Text),
-                    FontSize = Length.Px(12),
-                    FlexShrink = 0f,
-                })
+                // NOTE: A title edits in place, quiet until hovered; otherwise a small well
+                .Style(title
+                    ? new StyleSheet
+                    {
+                        Width = Length.Px(170),
+                        MinWidth = Length.Px(170),
+                        MaxWidth = Length.Px(170),
+                        Height = Length.Px(28),
+                        FlexGrow = 0f,
+                        Padding = new Thickness(Length.Px(2), Length.Px(6)),
+                        BorderRadius = 6,
+                        Background = new PaperColour("#000000").WithAlpha(0f),
+                        Color = new PaperColour(Theme.Text),
+                        FontSize = Length.Px(15),
+                        FontWeight = FontWeight.Bold,
+                        FlexShrink = 0f,
+                    }
+                    : new StyleSheet
+                    {
+                        Width = Length.Px(130),
+                        MinWidth = Length.Px(130),
+                        MaxWidth = Length.Px(130),
+                        FlexGrow = 0f,
+                        Height = Length.Px(24),
+                        Padding = new Thickness(Length.Px(2), Length.Px(8)),
+                        BorderRadius = 6,
+                        Background = new PaperColour("#000000").WithAlpha(0.25f),
+                        Color = new PaperColour(Theme.Text),
+                        FontSize = Length.Px(12),
+                        FlexShrink = 0f,
+                    })
+                .HoverStyle(new StyleSheet { Background = new PaperColour("#000000").WithAlpha(0.3f) })
                 .Build());
         }
 
@@ -235,6 +247,101 @@ namespace Sift.App
                 })
                 .Children(UI.Text(message, new StyleSheet { Color = new PaperColour(Theme.Warning), FontSize = Length.Px(12) }))
                 .Build());
+
+        // ── Polished pieces ──────────────────────────────────────────────────
+
+        // NOTE: A block of the sidebar separated from the next by a hairline, with an optional heading and controls beside it
+        public static UINode Section(string? title, IEnumerable<UINode> children, UINode? trailing = null)
+        {
+            var content = new List<UINode>();
+
+            if (title != null)
+            {
+                content.Add(UI.Box(new StyleSheet { Display = Display.Flex, FlexDirection = FlexDirection.Row, AlignItems = AlignItems.Center, JustifyContent = JustifyContent.SpaceBetween, Height = Length.Px(22) },
+                    TextOf(title, "heading"),
+                    trailing ?? UI.Box(new StyleSheet())));
+            }
+
+            content.AddRange(children);
+            return BoxOf("section", content);
+        }
+
+        // NOTE: An icon button with no fill until hovered
+        public static UINode GhostIcon(IconRef icon, Action onClick, bool enabled = true, string colour = Theme.Text, float size = 15f, bool active = false) =>
+            UI.Box(new PropsBuilder()
+                .Style(new StyleSheet
+                {
+                    Display = Display.Flex,
+                    AlignItems = AlignItems.Center,
+                    JustifyContent = JustifyContent.Center,
+                    Width = Length.Px(28),
+                    Height = Length.Px(28),
+                    BorderRadius = 7,
+                    Background = active ? new PaperColour("#FFFFFF").WithAlpha(0.12f) : new PaperColour("#000000").WithAlpha(0f),
+                    Opacity = enabled ? null : 0.3f,
+                    Cursor = enabled ? Cursor.Pointer : null,
+                    FlexShrink = 0f,
+                })
+                .HoverStyle(enabled ? new StyleSheet { Background = new PaperColour("#FFFFFF").WithAlpha(0.1f) } : StyleSheet.Empty)
+                .OnClick(() => { if (enabled) onClick(); })
+                .Children(UI.Icon(icon, size, new PaperColour(colour)))
+                .Build());
+
+        // NOTE: An icon and a label in a quiet pill, sized from the label
+        public static UINode IconTextButton(IconRef icon, string label, Action onClick) =>
+            UI.Box(new PropsBuilder()
+                .Style(PillStyle(enabled: true, square: false) with { Width = Length.Px(MathF.Ceiling(label.Length * 6.8f) + 40f), Height = Length.Px(28), BorderRadius = 8 })
+                .HoverStyle(new StyleSheet { Background = new PaperColour("#FFFFFF").WithAlpha(0.16f) })
+                .OnClick(onClick)
+                .Children(
+                    UI.Icon(icon, 13f, new PaperColour(Theme.SecondaryText), new StyleSheet { MarginRight = Length.Px(7), FlexShrink = 0f }),
+                    UI.Text(label, new StyleSheet { Color = new PaperColour(Theme.Text), FontSize = Length.Px(12), FlexShrink = 0f }))
+                .Build());
+
+        public static UINode Swatch(string colour, float size = 10f, float radius = 3f) =>
+            UI.Box(new StyleSheet
+            {
+                Width = Length.Px(size),
+                Height = Length.Px(size),
+                MinWidth = Length.Px(size),
+                BorderRadius = radius,
+                Background = new PaperColour(colour),
+                FlexShrink = 0f,
+            });
+
+        public static UINode Spacer() =>
+            UI.Box(new StyleSheet { FlexGrow = 1f });
+
+        public static UINode HStack(params UINode[] children) =>
+            UI.Box(new StyleSheet { Display = Display.Flex, FlexDirection = FlexDirection.Row, AlignItems = AlignItems.Center }, children);
+
+        // NOTE: Four dots for the beats of the bar, the current one lit
+        public static UINode BeatDots(int beat) =>
+            HStack(Enumerable.Range(0, 4).Select(i => UI.Box(new StyleSheet
+            {
+                Width = Length.Px(6),
+                Height = Length.Px(6),
+                BorderRadius = 3,
+                MarginRight = Length.Px(5),
+                FlexShrink = 0f,
+                Background = i == beat
+                    ? new PaperColour(i == 0 ? Theme.Playhead : Theme.Accent)
+                    : new PaperColour("#FFFFFF").WithAlpha(0.14f),
+            })).ToArray());
+
+        // NOTE: Fixed-width boxes rather than margins or gap in rows that share out space, Paper counts neither when it does
+        public static UINode Gap(float width) =>
+            UI.Box(new StyleSheet { Width = Length.Px(width), MinWidth = Length.Px(width), FlexShrink = 0f });
+
+        public static UINode VerticalDivider() =>
+            HStack(Gap(10), UI.Box(new StyleSheet
+            {
+                Width = Length.Px(1),
+                MinWidth = Length.Px(1),
+                Height = Length.Px(24),
+                Background = new PaperColour("#FFFFFF").WithAlpha(0.1f),
+                FlexShrink = 0f,
+            }), Gap(10));
 
         public static UINode LayerRow(int layer, int nodeCount, bool selected, Action onClick) =>
             UI.Box(new PropsBuilder()

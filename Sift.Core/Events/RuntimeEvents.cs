@@ -62,6 +62,9 @@ namespace Sift.Core.Events
 
     public sealed record HistoryChanged(bool CanUndo, bool CanRedo) : RuntimeEvent;
 
+    // NOTE: The whole sequence was swapped (e.g. a file was opened), take a new snapshot
+    public sealed record SequenceReplaced : RuntimeEvent;
+
     // NOTE: The subscriber fell behind and events were lost, take a new snapshot to resync
     public sealed record EventsDropped(long Count) : RuntimeEvent;
 }

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Sift.Core.Enums;
 using Sift.Core.Interfaces;
 using Sift.Core.Models.Nodes;
 
@@ -6,7 +7,7 @@ namespace Sift.Core.Components
 {
     public sealed record LogConfig : IComponentConfig;
 
-    [ComponentType("log")]
+    [ComponentType("log", Category = ComponentCategory.Debug)]
     public class LogComponent : Component<LogConfig>
     {
         private readonly ILogger<LogComponent> _logger;

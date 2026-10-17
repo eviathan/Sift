@@ -31,7 +31,7 @@ namespace Sift.Core.Components
     }
 
     // NOTE: Plays a note for Duration in musical time. The note off is always sent, even when cancelled
-    [ComponentType("midi")]
+    [ComponentType("midi", Category = ComponentCategory.Sound)]
     public class MIDIComponent : Component<MidiConfig>
     {
         private readonly IMidiOutput _midiOutput;
@@ -45,9 +45,10 @@ namespace Sift.Core.Components
         {
             // NOTE: Captured so a config change mid-note still turns off the note that was played
             var config = Config;
+            var note = Math.Clamp(config.Note + context.Message.Transpose, 0, 127);
 
-            _midiOutput.NoteOn(config.Channel, config.Note, config.Velocity);
-            context.Sequencer.Publish(new NoteOn(context.Node.Id, config.Channel, config.Note, config.Velocity));
+            _midiOutput.NoteOn(config.Channel, note, config.Velocity);
+            context.Sequencer.Publish(new NoteOn(context.Node.Id, config.Channel, note, config.Velocity));
 
             try
             {
@@ -58,8 +59,8 @@ namespace Sift.Core.Components
             }
             finally
             {
-                _midiOutput.NoteOff(config.Channel, config.Note);
-                context.Sequencer.Publish(new NoteOff(context.Node.Id, config.Channel, config.Note));
+                _midiOutput.NoteOff(config.Channel, note);
+                context.Sequencer.Publish(new NoteOff(context.Node.Id, config.Channel, note));
             }
         }
     }

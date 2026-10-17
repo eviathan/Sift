@@ -23,9 +23,13 @@ services.AddSingleton<SiftHost>();
 
 using var provider = services.BuildServiceProvider();
 
-DemoScene.Build(provider.GetRequiredService<Sequence>(), provider.GetRequiredService<ComponentFactory>());
-
 var host = SiftHost.Current = provider.GetRequiredService<SiftHost>();
+
+// NOTE: A .sift file passed on the command line is opened, otherwise the demo scene
+if (args.FirstOrDefault(x => !x.StartsWith("--") && x.EndsWith(".sift")) is { } file)
+    host.OpenPath(file);
+else
+    DemoScene.Build(provider.GetRequiredService<Sequence>(), provider.GetRequiredService<ComponentFactory>());
 
 var canvas = new Canvas("Sift", 1280, 800)
 {
@@ -50,6 +54,13 @@ if (args.Contains("--play"))
 
 if (args.Contains("--layers"))
     host.StartInLayers = true;
+
+// NOTE: --select x,y,z starts with that cell selected, for checking the inspector
+if (Array.IndexOf(args, "--select") is var selectIndex and >= 0 && selectIndex + 1 < args.Length)
+{
+    var parts = args[selectIndex + 1].Split(',').Select(int.Parse).ToArray();
+    host.Select(new Sift.Core.Grid.Vector3D(parts[0], parts[1], parts[2]));
+}
 
 canvas.MountCSXHotReload("src/App.csx", scopeId: "App");
 canvas.Run();

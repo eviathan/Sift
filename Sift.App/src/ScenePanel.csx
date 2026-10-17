@@ -26,10 +26,8 @@ UINode ScenePanel(Props _) {
     .Build());
 
   bool isPlane = host.Mode == Sift.App.ViewMode.Plane;
-  string badge = isPlane ? "LAYER " + host.Layer.ToString() : "ALL LAYERS  -  LAYER " + host.Layer.ToString() + " SELECTED";
-  string hint = isPlane
-    ? "Scroll to pan  -  Cmd scroll to zoom  -  [ ] layer  -  Tab layers"
-    : "Scroll or click to choose a layer  -  Enter or double-click to open it";
+  string badge = isPlane ? "Layer " + host.Layer.ToString() : "All layers";
+  string badgeNote = isPlane ? "" : "Scroll or click to choose, Enter to open";
 
   return (
     <Box className="scene">
@@ -37,9 +35,12 @@ UINode ScenePanel(Props _) {
       {overlay}
       <Box className="scene-badge">
         <Text className="scene-badge-text">{badge}</Text>
+        <Text className="scene-badge-note">{badgeNote}</Text>
       </Box>
-      <Box className="scene-hint">
-        <Text className="scene-hint-text">{hint}</Text>
+      <Box className="scene-tools">
+        {Widgets.GhostIcon(Paper.Icons.IconSets.Bs.BsZoomOut, () => host.Zoom(-1), isPlane, size: 14f)}
+        {Widgets.GhostIcon(Paper.Icons.IconSets.Bs.BsFullscreen, () => host.FitView(), true, size: 13f)}
+        {Widgets.GhostIcon(Paper.Icons.IconSets.Bs.BsZoomIn, () => host.Zoom(1), isPlane, size: 14f)}
       </Box>
     </Box>
   );

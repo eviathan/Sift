@@ -9,6 +9,7 @@ using Sift.Core.Interfaces;
 using Sift.Core.Models;
 using Sift.Core.Models.Nodes;
 using Sift.Core.Nodes;
+using Sift.Core.Serialisation;
 using Sift.Core.Snapshots;
 
 namespace Sift.Core
@@ -35,6 +36,12 @@ namespace Sift.Core
         // NOTE: Components are fire and forget by design, some loop and need to run concurrently
         private readonly ConcurrentDictionary<Task, byte> _activeComponentTasks = new();
         private CancellationTokenSource _playbackCancellationTokenSource = new();
+
+        // NOTE: Values the components on each node share, for this playback
+        private readonly ConcurrentDictionary<Guid, NodeState> _nodeStates = new();
+
+        // NOTE: Grid edits made by components while playing, undone on Stop so playing never changes the saved sequence
+        private readonly Stack<IGridCommand> _performanceEdits = new();
 
         // NOTE: Per component so removing one (or its node) cancels anything it still has running
         private readonly Dictionary<Guid, CancellationTokenSource> _componentCancellation = [];
@@ -103,6 +110,9 @@ namespace Sift.Core
                 _playbackCancellationTokenSource.Cancel();
                 runningTasks = _activeComponentTasks.Keys.ToArray();
 
+                // NOTE: Edits still queued from components die with the playback
+                Drain();
+                RevertPerformanceEdits();
                 Reset();
             }
 
@@ -137,6 +147,36 @@ namespace Sift.Core
 
         public Task<bool> Redo() =>
             EnqueueHistory(isUndo: false);
+
+        // NOTE: Swaps in a whole sequence (e.g. one just opened). Only while stopped, and the undo history goes with
+        // the old sequence
+        public void Replace(LoadedSequence loaded)
+        {
+            ArgumentNullException.ThrowIfNull(loaded);
+
+            lock (_sync)
+            {
+                if (_isRunning)
+                    throw new InvalidOperationException("Stop playback before replacing the sequence.");
+
+                // NOTE: Edits queued for the old sequence no longer apply
+                Drain();
+
+                _sequence.Grid.Clear();
+
+                foreach (var node in loaded.Nodes)
+                    _sequence.Grid.AddNode(node);
+
+                _sequence.Tempo = (ushort)Math.Clamp(loaded.Tempo, 1, ushort.MaxValue);
+                _sequence.Quantisation = loaded.Quantisation;
+
+                _undo.Clear();
+                _redo.Clear();
+
+                Raise(new SequenceReplaced());
+                RaiseHistoryChanged();
+            }
+        }
 
         // NOTE: Applied in order with commands, so the snapshot plus every later event is always consistent
         public Task<SequenceSnapshot> GetSnapshotAsync()
@@ -360,6 +400,10 @@ namespace Sift.Core
                     _undo.Push(inverse);
                     _redo.Clear();
                 }
+                else
+                {
+                    _performanceEdits.Push(inverse);
+                }
 
                 CancelComponents(GetDetachedComponents(inverse));
                 RaiseNodeChange(pending.Command.NodeId, before, pending.Source);
@@ -412,6 +456,25 @@ namespace Sift.Core
 
                 pending.Completion.TrySetException(ex);
                 return false;
+            }
+        }
+
+        // NOTE: Last first, skipping any the user's own edits have made impossible (e.g. they deleted the node)
+        private void RevertPerformanceEdits()
+        {
+            while (_performanceEdits.TryPop(out var inverse))
+            {
+                var before = CaptureNode(inverse.NodeId);
+
+                try
+                {
+                    inverse.Apply(_sequence.Grid);
+                    RaiseNodeChange(inverse.NodeId, before, CommandSource.Component);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogInformation($"Couldn't revert a {inverse.GetType().Name} made while playing: {ex.Message}");
+                }
             }
         }
 
@@ -554,7 +617,7 @@ namespace Sift.Core
         private void InvokePort(Node node, NodeInfo nodeInfo, Direction direction, bool isPlay, Message message)
         {
             // NOTE: Dispatch on the current tick rather than DueTime so late events never move time backwards
-            var context = new ComponentContext(nodeInfo, direction, isPlay, message, CurrentTime, this);
+            var context = new ComponentContext(nodeInfo, direction, isPlay, message, CurrentTime, this, _nodeStates.GetOrAdd(node.Id, _ => new NodeState()));
 
             foreach (var component in node.GetPort(direction).Components)
             {
@@ -663,6 +726,7 @@ namespace Sift.Core
             _inFlight.Clear();
             _activeComponentTasks.Clear();
             _componentCancellation.Clear();
+            _nodeStates.Clear();
 
             lock (_waitersSync)
             {

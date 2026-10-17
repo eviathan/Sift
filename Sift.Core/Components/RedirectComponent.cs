@@ -6,7 +6,7 @@ namespace Sift.Core.Components
 {
     public sealed record RedirectConfig(Direction To = Direction.Up) : IComponentConfig;
 
-    [ComponentType("redirect")]
+    [ComponentType("redirect", Category = ComponentCategory.Flow)]
     public class RedirectComponent : Component<RedirectConfig>
     {
         public override Task InvokeAsync(ComponentContext context, CancellationToken cancellationToken)

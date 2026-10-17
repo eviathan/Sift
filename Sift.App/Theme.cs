@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Numerics;
+using Sift.Core.Enums;
 
 namespace Sift.App
 {
@@ -26,6 +27,35 @@ namespace Sift.App
         public const string Redirect = "#0A84FF";
         public const string Midi = "#9E73F2";
         public const string Log = "#8B96B2";
+
+        // Component categories
+        public const string Source = "#8CD973";
+        public const string Flow = "#0A84FF";
+        public const string Time = "#FFD60A";
+        public const string Sound = "#9E73F2";
+        public const string Motion = "#FF9F0A";
+        public const string Debug = "#8B96B2";
+
+        public static string CategoryColour(ComponentCategory category) => category switch
+        {
+            ComponentCategory.Source => Source,
+            ComponentCategory.Flow => Flow,
+            ComponentCategory.Time => Time,
+            ComponentCategory.Sound => Sound,
+            ComponentCategory.Motion => Motion,
+            _ => Debug
+        };
+
+        // NOTE: Which category a node shows as when it has several, the one that says most about what it does
+        public static int CategoryPriority(ComponentCategory category) => category switch
+        {
+            ComponentCategory.Sound => 5,
+            ComponentCategory.Source => 4,
+            ComponentCategory.Motion => 3,
+            ComponentCategory.Time => 2,
+            ComponentCategory.Flow => 1,
+            _ => 0
+        };
 
         public static Vector4 Rgba(string hex, float alpha = 1f)
         {

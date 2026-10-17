@@ -35,13 +35,19 @@ namespace Sift.App.Editing
                 var range = parameter.GetCustomAttribute<RangeAttribute>();
                 var parameterType = parameter.ParameterType;
 
+                // NOTE: An optional choice (e.g. a Direction? "To") offers "none" first, shown as Format describes
+                var optionalEnum = Nullable.GetUnderlyingType(parameterType) is { IsEnum: true } underlying ? underlying : null;
+                var enumType = parameterType.IsEnum ? parameterType : optionalEnum;
+
                 var kind = parameterType == typeof(int) ? FieldKind.Integer
                     : parameterType == typeof(bool) ? FieldKind.Boolean
-                    : parameterType.IsEnum ? FieldKind.Choice
+                    : enumType != null ? FieldKind.Choice
                     : parameterType == typeof(string) ? FieldKind.Text
                     : FieldKind.Unsupported;
 
-                var options = parameterType.IsEnum ? Enum.GetValues(parameterType).Cast<object>().ToList() : [];
+                var options = enumType == null ? []
+                    : optionalEnum != null ? [null!, .. Enum.GetValues(enumType).Cast<object>()]
+                    : Enum.GetValues(enumType).Cast<object>().ToList();
 
                 fields.Add(new ConfigField(
                     name,
@@ -87,10 +93,13 @@ namespace Sift.App.Editing
 
         public static string Format(ConfigField field, object? value) => value switch
         {
-            int note when field.Name == "Note" => $"{NoteName(note)}  ({note})",
+            int note when field.Name is "Note" or "Root" => $"{NoteName(note)}  ({note})",
+            int semitones when field.Name == "Semitones" => semitones > 0 ? $"+{semitones}" : semitones.ToString(),
+            0 when field.Name == "Repeats" => "Forever",
             NoteDuration duration => DurationName(duration),
             Enum choice => Humanise(choice.ToString()),
-            null => "",
+            null when field.Name == "To" => "Straight on",
+            null => "None",
             _ => value.ToString() ?? ""
         };
 

@@ -4,6 +4,7 @@ using Sift.Core.Events;
 using Sift.Core.Factories;
 using Sift.Core.Interfaces;
 using Sift.Core.MIDI;
+using Sift.Core.Serialisation;
 
 namespace Sift.Core.Extensions
 {
@@ -20,6 +21,7 @@ namespace Sift.Core.Extensions
             serviceCollection.AddSingleton<ComponentRegistry>();
             serviceCollection.AddSingleton<ComponentFactory>();
             serviceCollection.AddSingleton<IMidiOutput, DryWetMidiOutput>();
+            serviceCollection.AddSingleton<SequenceSerialiser>();
 
             return serviceCollection;
         }

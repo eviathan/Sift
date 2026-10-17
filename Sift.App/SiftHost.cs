@@ -1,5 +1,7 @@
 using System.Numerics;
 using Paper.Core.Threading;
+using Sift.Core.Models;
+using Sift.Core.Serialisation;
 using Paper.Rendering.Silk.NET;
 using Silk.NET.OpenGL;
 using Sift.App.Editing;
@@ -48,6 +50,8 @@ namespace Sift.App
 
         private readonly RuntimeEventHub _events;
         private readonly ComponentRegistry _registry;
+        private readonly SequenceSerialiser _serialiser;
+        private bool _recentrePending;
         private Canvas? _canvas;
         private GL? _gl;
         private SceneRenderer? _renderer;
@@ -90,7 +94,50 @@ namespace Sift.App
         // NOTE: The port whose "add component" menu is open in the sidebar
         public Direction? AddingToPort { get; private set; }
 
+        public static readonly Direction[] PORT_ORDER = [Direction.Up, Direction.Right, Direction.Down, Direction.Left, Direction.Forwards, Direction.Backwards];
+        private static readonly (int Numerator, int Denominator)[] QUANTISATIONS = [(1, 4), (1, 8), (1, 16), (1, 32)];
+
+        private Direction _selectedPort;
+        private Guid? _selectedPortNode;
+
+        // NOTE: The port shown in the sidebar, the selected node's first port with anything on it until one is picked
+        public Direction SelectedPort
+        {
+            get
+            {
+                if (_selectedPortNode != SelectedNodeId)
+                {
+                    _selectedPortNode = SelectedNodeId;
+                    _selectedPort = SelectedNode is { } node
+                        ? PORT_ORDER.FirstOrDefault(x => node.Ports.TryGetValue(x, out var components) && components.Count > 0, Direction.Up)
+                        : Direction.Up;
+                }
+
+                return _selectedPort;
+            }
+        }
+
+        public IReadOnlyList<(ComponentCategory Category, IReadOnlyList<string> Types)> ComponentTypesByCategory =>
+            _registry.Registrations
+                .GroupBy(x => x.Category)
+                .OrderByDescending(x => Theme.CategoryPriority(x.Key))
+                .Select(x => (x.Key, (IReadOnlyList<string>)x.Select(r => r.Name).Order().ToList()))
+                .ToList();
+
+        // NOTE: 0-3 while playing, for the transport's beat dots
+        public int BeatInBar => Scene.IsPlaying ? (int)(Scene.CurrentTick / Time.TicksPerQuarterNote % 4) : -1;
+
         public string? LastError => Scene.LastError is { } error && SceneModel.Seconds - error.At < ERROR_SECONDS ? error.Message : null;
+
+        // NOTE: The file the sequence was opened from or last saved to, null until it's saved
+        public string? CurrentPath { get; private set; }
+
+        public bool IsDirty { get; private set; }
+
+        public string DocumentName => CurrentPath != null ? Path.GetFileNameWithoutExtension(CurrentPath) : "Untitled";
+
+        // NOTE: Waiting for the user to confirm throwing away unsaved changes (New / Open)
+        public Action? PendingDiscard { get; private set; }
 
         // NOTE: The component types that can be added, by their saved name
         public IReadOnlyList<string> ComponentTypes => _registry.Registrations.Select(x => x.Name).Order().ToList();
@@ -110,7 +157,7 @@ namespace Sift.App
         public (int Min, int Max) Layers =>
             SceneRenderer.LayerRange(Scene, Layer);
 
-        public SiftHost(Sequence sequence, Sequencer sequencer, SequencerRuntime runtime, ComponentFactory components, RuntimeEventHub events, ComponentRegistry registry)
+        public SiftHost(Sequence sequence, Sequencer sequencer, SequencerRuntime runtime, ComponentFactory components, RuntimeEventHub events, ComponentRegistry registry, SequenceSerialiser serialiser)
         {
             Sequence = sequence;
             Sequencer = sequencer;
@@ -118,6 +165,7 @@ namespace Sift.App
             Components = components;
             _events = events;
             _registry = registry;
+            _serialiser = serialiser;
 
             Camera = new SceneCamera(PlanePose());
         }
@@ -134,6 +182,7 @@ namespace Sift.App
             // NOTE: Subscribe before the snapshot so no event falls between them
             _subscription = _events.Subscribe();
             Scene.Load(Runtime.GetSnapshotAsync().GetAwaiter().GetResult());
+            _recentrePending = false;
 
             var board = SceneRenderer.MeasureBoard(Frame(0));
             _planeCentre = new Vector2((board.MinX + board.MaxX) / 2f, (board.MinY + board.MaxY) / 2f);
@@ -207,6 +256,121 @@ namespace Sift.App
         public void NudgeTempo(int amount)
         {
             Sequence.Tempo = (ushort)Math.Clamp(Sequence.Tempo + amount, 20, 300);
+            IsDirty = true;
+            MarkDirty();
+        }
+
+        // ── Files ────────────────────────────────────────────────────────────
+
+        public void NewSequence() =>
+            GuardUnsaved(() => ReplaceWith(LoadedSequence.Empty(Sequence.Tempo), path: null));
+
+        public void OpenSequence() =>
+            GuardUnsaved(() => NativeFileDialog.OpenFile(path => UiThread.Post(() =>
+            {
+                if (path != null)
+                    OpenPath(path);
+            }), "Open a Sift sequence"));
+
+        public void OpenPath(string path)
+        {
+            try
+            {
+                ReplaceWith(_serialiser.Read(File.ReadAllText(path)), path);
+            }
+            catch (Exception ex) when (ex is SequenceFormatException or IOException or UnauthorizedAccessException)
+            {
+                Scene.ReportError($"Couldn't open {Path.GetFileName(path)}: {ex.Message}");
+                MarkDirty();
+            }
+        }
+
+        public void Save()
+        {
+            if (CurrentPath == null)
+                SaveAs();
+            else
+                SaveTo(CurrentPath);
+        }
+
+        public void SaveAs() =>
+            NativeFileDialog.SaveFile(path => UiThread.Post(() =>
+            {
+                if (path != null)
+                    SaveTo(Path.HasExtension(path) ? path : path + ".sift");
+            }), "Save the sequence", DocumentName + ".sift");
+
+        public void ConfirmDiscard()
+        {
+            var action = PendingDiscard;
+            PendingDiscard = null;
+            action?.Invoke();
+            MarkDirty();
+        }
+
+        public void CancelDiscard()
+        {
+            PendingDiscard = null;
+            MarkDirty();
+        }
+
+        // NOTE: Written from a snapshot, which completes on the clock thread while playing, so the write is off the UI thread
+        private void SaveTo(string path) =>
+            Runtime.GetSnapshotAsync().ContinueWith(snapshot =>
+            {
+                try
+                {
+                    File.WriteAllText(path, _serialiser.Write(snapshot.Result));
+
+                    UiThread.Post(() =>
+                    {
+                        CurrentPath = path;
+                        IsDirty = false;
+                        MarkDirty();
+                    });
+                }
+                catch (Exception ex)
+                {
+                    UiThread.Post(() =>
+                    {
+                        Scene.ReportError($"Couldn't save {Path.GetFileName(path)}: {ex.GetBaseException().Message}");
+                        MarkDirty();
+                    });
+                }
+            }, TaskScheduler.Default);
+
+        private void GuardUnsaved(Action action)
+        {
+            if (!IsDirty)
+            {
+                action();
+                return;
+            }
+
+            PendingDiscard = action;
+            MarkDirty();
+        }
+
+        private void ReplaceWith(LoadedSequence loaded, string? path)
+        {
+            if (Sequencer.IsPlaying)
+                Sequencer.Stop();
+
+            Runtime.Replace(loaded);
+
+            CurrentPath = path;
+            IsDirty = false;
+            SelectedNodeId = null;
+            SelectedCell = null;
+            AddingToPort = null;
+            Layer = loaded.Nodes.Count > 0 ? loaded.Nodes.Min(x => x.Position.Z) : 0;
+
+            // NOTE: Centre on the new sequence once its snapshot arrives
+            _recentrePending = true;
+
+            if (Mode != ViewMode.Plane)
+                SetMode(ViewMode.Plane);
+
             MarkDirty();
         }
 
@@ -225,6 +389,14 @@ namespace Sift.App
         // ── Editing ──────────────────────────────────────────────────────────
         // NOTE: Everything goes through the runtime's commands, so it's undoable and safe while playing. The scene
         // catches up from the events they raise
+
+        public void Select(Vector3D cell)
+        {
+            Layer = cell.Z;
+            SelectedCell = cell;
+            SelectedNodeId = Sequence.Grid.TryGetNode(cell, out var node) ? node.Id : null;
+            MarkDirty();
+        }
 
         public void AddNodeAt(Vector3D cell)
         {
@@ -269,6 +441,53 @@ namespace Sift.App
 
         public void SetActive(Guid nodeId, bool isActive) =>
             Submit(new UpdateNode(nodeId, IsActive: isActive));
+
+        public void SelectPort(Direction port)
+        {
+            _ = SelectedPort;
+            _selectedPort = port;
+            AddingToPort = null;
+            MarkDirty();
+        }
+
+        public void CycleQuantisation(int direction)
+        {
+            var current = Array.FindIndex(QUANTISATIONS, x => x.Numerator == Sequence.Quantisation.Numerator && x.Denominator == Sequence.Quantisation.Denominator);
+            var next = QUANTISATIONS[Math.Clamp(current + direction, 0, QUANTISATIONS.Length - 1)];
+
+            Sequence.Quantisation = new Quantisation(next.Numerator, next.Denominator);
+            IsDirty = true;
+            MarkDirty();
+        }
+
+        public void Zoom(int direction)
+        {
+            if (Mode != ViewMode.Plane)
+                return;
+
+            _planeZoom = Math.Clamp(_planeZoom * MathF.Pow(1.25f, direction), MIN_ZOOM, MAX_ZOOM);
+            Camera.AnimateTo(PlanePose(), SceneModel.Seconds);
+            MarkDirty();
+        }
+
+        // NOTE: Centres the board and zooms so it fills the view
+        public void FitView()
+        {
+            if (Mode != ViewMode.Plane)
+            {
+                SetMode(ViewMode.Plane);
+                return;
+            }
+
+            var board = SceneRenderer.MeasureBoard(Frame(0));
+            var width = board.MaxX - board.MinX + 1 + 1.5f;
+            var height = (board.MaxY - board.MinY + 1) * MathF.Cos(PLANE_TILT) + PLANE_LAYER_SPACING * MathF.Sin(PLANE_TILT) + 1.5f;
+
+            _planeCentre = new Vector2((board.MinX + board.MaxX) / 2f, (board.MinY + board.MaxY) / 2f);
+            _planeZoom = Math.Clamp(MathF.Min(_viewWidth / width, _viewHeight / height), MIN_ZOOM, MAX_ZOOM);
+            Camera.AnimateTo(PlanePose(), SceneModel.Seconds);
+            MarkDirty();
+        }
 
         public void ToggleAddMenu(Direction port)
         {
@@ -559,6 +778,28 @@ namespace Sift.App
                     if (_shiftHeld) Redo();
                     else Undo();
                     return true;
+
+                case "S":
+                    if (!_commandHeld)
+                        return false;
+
+                    if (_shiftHeld) SaveAs();
+                    else Save();
+                    return true;
+
+                case "O":
+                    if (!_commandHeld)
+                        return false;
+
+                    OpenSequence();
+                    return true;
+
+                case "N":
+                    if (!_commandHeld)
+                        return false;
+
+                    NewSequence();
+                    return true;
             }
 
             return false;
@@ -604,12 +845,23 @@ namespace Sift.App
                 {
                     Scene.Load(snapshot.Result);
                     uiChanged = true;
+
+                    if (_recentrePending)
+                    {
+                        _recentrePending = false;
+                        var board = SceneRenderer.MeasureBoard(Frame(0));
+                        _planeCentre = new Vector2((board.MinX + board.MaxX) / 2f, (board.MinY + board.MaxY) / 2f);
+                        Camera.JumpTo(PlanePose());
+                    }
                 }
             }
 
             while (_subscription!.Reader.TryRead(out var runtimeEvent))
             {
                 uiChanged |= Scene.Apply(runtimeEvent);
+
+                if (runtimeEvent is NodeAdded or NodeRemoved or NodeMoved or NodeChanged)
+                    IsDirty = true;
 
                 // NOTE: Cleared on the event rather than by checking the scene, a node just added isn't in it yet
                 if (runtimeEvent is NodeRemoved removed && removed.NodeId == SelectedNodeId)

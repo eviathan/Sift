@@ -11,6 +11,7 @@ $secondary:      #8B96B2;
 $dimmed:         #3C4661;
 $accent:         #8CD973;
 $error:          #FF8080;
+$warning-text:   #FF9F0A;
 
 /* -- Window --------------------------------------------------------------------- */
 .root {
@@ -33,9 +34,22 @@ $error:          #FF8080;
   flex-shrink: 0;
 }
 
-.header-glyph {
-  width: 12px;
-  height: 25px;
+.header-side {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-grow: 1;
+  flex-basis: 0;
+}
+
+.header-right {
+  justify-content: flex-end;
+  padding-right: 18px;
+}
+
+.header-title {
+  color: #5C5F6B;
+  font-size: 12px;
 }
 
 .body {
@@ -59,29 +73,36 @@ $error:          #FF8080;
 
 .scene-badge {
   position: absolute;
-  left: 14px;
-  top: 12px;
-  padding: 4px 9px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.35);
+  left: 16px;
+  top: 14px;
+  display: flex;
+  flex-direction: column;
   pointer-events: none;
 }
 
 .scene-badge-text {
+  color: $text;
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.scene-badge-note {
   color: $secondary;
   font-size: 11px;
+  margin-top: 2px;
 }
 
-.scene-hint {
+/* Floating zoom controls, bottom left of the scene */
+.scene-tools {
   position: absolute;
-  right: 14px;
-  bottom: 12px;
-  pointer-events: none;
-}
-
-.scene-hint-text {
-  color: rgba(139, 150, 178, 0.6);
-  font-size: 11px;
+  left: 14px;
+  bottom: 14px;
+  display: flex;
+  flex-direction: row;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(20, 23, 33, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* -- Sidebar -------------------------------------------------------------------- */
@@ -97,11 +118,29 @@ $error:          #FF8080;
   overflow: hidden;
 }
 
-/* A small capitalised heading over a card */
+/* A block of the sidebar, separated from the next by a hairline */
+.section {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  gap: 9px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* A small capitalised heading, as Spot's */
 .heading {
   color: $secondary;
   font-size: 11px;
-  margin-top: 6px;
+  font-weight: bold;
+  letter-spacing: 0.8px;
+}
+
+.badge {
+  color: $warning-text;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(255, 159, 10, 0.15);
 }
 
 .card {
@@ -134,7 +173,8 @@ $error:          #FF8080;
 
 .title {
   color: $text;
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: bold;
 }
 
 .note {
@@ -159,9 +199,10 @@ $error:          #FF8080;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  height: 28px;
+  height: 30px;
   padding: 0 10px;
-  border-radius: 6px;
+  margin: 0 -10px;
+  border-radius: 7px;
   cursor: pointer;
 }
 
@@ -174,11 +215,11 @@ $error:          #FF8080;
   display: flex;
   flex-direction: row;
   align-items: center;
-  height: 56px;
+  height: 58px;
   background: $footer;
-  padding: 0 16px;
-  gap: 14px;
+  padding: 0 10px;
   flex-shrink: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* NOTE: Margins rather than gap, Paper leaves gap out of a nested row's natural width so its children get squeezed */
@@ -191,8 +232,9 @@ $error:          #FF8080;
 
 .transport-position {
   color: $text;
-  font-size: 18px;
-  width: 72px;
+  font-size: 20px;
+  font-weight: bold;
+  width: 78px;
   flex-shrink: 0;
 }
 
@@ -205,8 +247,9 @@ $error:          #FF8080;
 
 .transport-value {
   color: $text;
-  font-size: 13px;
-  margin: 0 6px;
+  font-size: 15px;
+  font-weight: bold;
+  margin: 0 6px 0 0;
   flex-shrink: 0;
 }
 

@@ -5,18 +5,19 @@ using Sift.Core.Factories;
 using Sift.Core.Grid;
 using Sift.Core.Interfaces;
 using Sift.Core.Models;
+using Sift.Core.Music;
 using Sift.Core.Nodes;
 
 namespace Sift.App
 {
-    // TODO: Replace with loading a .sift.json once serialisation lands
+    // NOTE: A small piece that shows the components off: a clock drives an arpeggio, every other beat climbs to a chord
+    // that sometimes sends an octave-up bell down the right, which echoes up a layer where a node walks as it plays. A
+    // slow pulse on the top layer drops a bass note straight down through the stack
     public static class DemoScene
     {
-        // A one-bar loop around a square on layer 0 that also sends a branch up through layer 1 and back down, plus an
-        // emitter on layer 2 firing straight down through the stack
         public static void Build(Sequence sequence, ComponentFactory components)
         {
-            sequence.Tempo = 120;
+            sequence.Tempo = 112;
             sequence.Quantisation = new Quantisation(1, 16);
 
             Node Add(int x, int y, int z, string name, bool emitOnPlay = false)
@@ -32,39 +33,35 @@ namespace Sift.App
                     node.GetPort(port).Add(components.Create(config));
             }
 
-            // Layer 0: the loop
-            var start = Add(0, 0, 0, "Start", emitOnPlay: true);
-            On(start, Direction.Right, new EmitConfig());
-            On(start, Direction.Up, new MidiConfig(Note: 72), new RedirectConfig(Direction.Right));
+            // Layer 0
+            On(Add(0, 0, 0, "Clock", emitOnPlay: true), Direction.Right, new ClockConfig(NoteDuration.QuarterNote));
 
-            var east = Add(4, 0, 0, "East");
-            On(east, Direction.Left, new MidiConfig(Note: 60), new RedirectConfig(Direction.Up), new RedirectConfig(Direction.Forwards));
+            On(Add(4, 0, 0, "Arp"), Direction.Left,
+                new NotesConfig("C4 E4 G4 B4 D5", NoteOrder.UpDown, 96, 1, NoteDuration.SixteenthNote),
+                new DivideConfig(2, Direction.Up));
 
-            var north = Add(4, 4, 0, "North");
-            On(north, Direction.Down, new MidiConfig(Note: 64), new RedirectConfig(Direction.Left));
+            On(Add(4, 4, 0, "Chords"), Direction.Down,
+                new ChordConfig(48, ChordQuality.Major7, 1, 70, 1, NoteDuration.HalfNote),
+                new ChanceConfig(60, Direction.Right));
 
-            var west = Add(0, 4, 0, "West");
-            On(west, Direction.Right, new MidiConfig(Note: 67), new RedirectConfig(Direction.Down));
+            On(Add(8, 4, 0, "Octave"), Direction.Left, new TransposeConfig(12, Direction.Down));
 
-            // Layer 1: the branch
-            var lift = Add(4, 0, 1, "Lift");
-            On(lift, Direction.Backwards, new MidiConfig(Note: 48), new RedirectConfig(Direction.Right));
+            On(Add(8, 0, 0, "Bell"), Direction.Up,
+                new MidiConfig(Note: 67, Velocity: 80, Duration: NoteDuration.EighthNote),
+                new DelayConfig(NoteDuration.EighthNote, Direction.Forwards));
 
-            var turn = Add(7, 0, 1, "Turn");
-            On(turn, Direction.Left, new MidiConfig(Note: 55), new RedirectConfig(Direction.Up));
+            // Layer 1
+            On(Add(8, 0, 1, "Echo"), Direction.Backwards,
+                new NotesConfig("G5 E5 C5", NoteOrder.Down, 70, 1, NoteDuration.SixteenthNote),
+                new RedirectConfig(Direction.Left));
 
-            var drop = Add(7, 2, 1, "Drop");
-            On(drop, Direction.Down, new RedirectConfig(Direction.Backwards));
+            On(Add(3, 0, 1, "Walker"), Direction.Right,
+                new MoveConfig(Direction.Up, 1),
+                new MidiConfig(Note: 72, Velocity: 60));
 
-            var landing = Add(7, 2, 0, "Landing");
-            On(landing, Direction.Forwards, new MidiConfig(Note: 79));
-
-            // Layer 2: straight down through the stack
-            var high = Add(2, 2, 2, "High", emitOnPlay: true);
-            On(high, Direction.Backwards, new EmitConfig());
-
-            var low = Add(2, 2, 0, "Low");
-            On(low, Direction.Forwards, new MidiConfig(Note: 84, Duration: NoteDuration.EighthNote));
+            // Layer 2
+            On(Add(0, 4, 2, "Pulse", emitOnPlay: true), Direction.Backwards, new ClockConfig(NoteDuration.WholeNote));
+            On(Add(0, 4, 0, "Bass"), Direction.Forwards, new MidiConfig(Note: 36, Duration: NoteDuration.QuarterNote));
         }
     }
 }

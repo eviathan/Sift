@@ -9,7 +9,7 @@ namespace Sift.Core.Snapshots
 
     public sealed record NodeInfo(Guid Id, string? Name, Vector3D Position, bool IsActive, bool EmitOnPlay);
 
-    public sealed record ComponentSnapshot(Guid Id, string Type, IComponentConfig Config);
+    public sealed record ComponentSnapshot(Guid Id, string Type, ComponentCategory Category, IComponentConfig Config);
 
     public sealed record NodeSnapshot(
         Guid Id,

@@ -26,13 +26,15 @@ namespace Sift.App.Scene
 
     // NOTE: Draws the grid into a texture that Paper shows through UI.Viewport. Everything except the glows is drawn
     // back to front (painter's algorithm) so the translucent layers composite correctly without a depth buffer
-    public sealed unsafe class SceneRenderer : IDisposable
+    public sealed unsafe partial class SceneRenderer : IDisposable
     {
         private const int SAMPLES = 4;
 
         // NOTE: In cells
         private const float TILE_HALF_SIZE = 0.38f;
         private const float TILE_HEIGHT = 0.16f;
+        private const float TILE_RADIUS = 0.11f;
+        private const int CORNER_SEGMENTS = 4;
         private const float BOARD_MARGIN = 3f;
         private const int MIN_BOARD_WIDTH = 12;
         private const int MIN_BOARD_HEIGHT = 8;
@@ -104,6 +106,8 @@ namespace Sift.App.Scene
         private readonly uint _multisampleColour;
 
         private readonly List<float> _triangles = [];
+        private readonly List<float> _background = [];
+        private readonly List<Vector2> _outline = [];
         private readonly List<float> _glows = [];
         private readonly List<(float Depth, int Layer)> _layerOrder = [];
         private readonly List<(float Depth, NodeSnapshot Node)> _nodeOrder = [];
@@ -158,6 +162,7 @@ namespace Sift.App.Scene
 
             _triangles.Clear();
             _glows.Clear();
+            BuildBackground();
 
             Board = MeasureBoard(frame);
             BuildLayers();
@@ -248,6 +253,24 @@ namespace Sift.App.Scene
             }
         }
 
+        // NOTE: A gentle top-to-bottom gradient in clip space behind everything
+        private void BuildBackground()
+        {
+            _background.Clear();
+
+            var top = Theme.Rgba("#2C3346");
+            var bottom = Theme.Rgba("#1E2331");
+
+            void Vertex(float x, float y, Vector4 colour)
+            {
+                _background.Add(x); _background.Add(y); _background.Add(0f);
+                _background.Add(colour.X); _background.Add(colour.Y); _background.Add(colour.Z); _background.Add(colour.W);
+            }
+
+            Vertex(-1f, -1f, bottom); Vertex(1f, -1f, bottom); Vertex(1f, 1f, top);
+            Vertex(-1f, -1f, bottom); Vertex(1f, 1f, top); Vertex(-1f, 1f, top);
+        }
+
         private void BuildLayers()
         {
             var (minLayer, maxLayer) = LayerRange(_frame.Model, _frame.SelectedLayer);
@@ -277,45 +300,46 @@ namespace Sift.App.Scene
             var board = Board;
             var z = layer * _layerSpacing;
             var pixel = _frame.Camera.PixelsToWorld(1f);
+            var selected = layer == _frame.SelectedLayer;
 
             var left = board.MinX - 0.5f;
             var right = board.MaxX + 0.5f;
             var bottom = board.MinY - 0.5f;
             var top = board.MaxY + 0.5f;
 
-            // The board
             // NOTE: Ghost layers fade their board much more than their nodes, so they read as nodes floating above/below
-            var boardAlpha = layer == _frame.SelectedLayer ? alpha : alpha * alpha;
-            AddQuad(new(left, bottom, z), new(right, bottom, z), new(right, top, z), new(left, top, z), Theme.Rgba(Theme.Card, 0.94f * boardAlpha));
+            var boardAlpha = selected ? alpha : alpha * alpha;
 
-            // NOTE: Outline the selected layer in the isometric view so it's clear which one Enter opens
-            if (layer == _frame.SelectedLayer && _frame.LayersAmount > 0.01f)
-            {
-                var edge = Theme.Rgba(Theme.Accent, 0.8f * _frame.LayersAmount);
-                Vector3[] corners = [new(left, bottom, z), new(right, bottom, z), new(right, top, z), new(left, top, z)];
+            // The board
+            AddQuad(new(left, bottom, z), new(right, bottom, z), new(right, top, z), new(left, top, z), Theme.Rgba(Theme.Card, boardAlpha));
 
-                for (var i = 0; i < 4; i++)
-                    AddRibbon(corners[i], corners[(i + 1) % 4], pixel * 2f, edge);
-            }
+            // NOTE: Outline the selected layer in the isometric view so it's clear which one Enter opens, a faint edge otherwise
+            var edge = selected && _frame.LayersAmount > 0.01f
+                ? Theme.Rgba(Theme.Accent, 0.8f * _frame.LayersAmount)
+                : Theme.White(0.07f * boardAlpha);
+            Vector3[] boardCorners = [new(left, bottom, z), new(right, bottom, z), new(right, top, z), new(left, top, z)];
 
-            for (var x = board.MinX; x <= board.MaxX + 1; x++)
-            {
-                var major = x % 4 == 0;
-                AddRibbon(new(x - 0.5f, bottom, z), new(x - 0.5f, top, z), pixel, Theme.White((major ? 0.075f : 0.04f) * boardAlpha));
-            }
+            for (var i = 0; i < 4; i++)
+                AddRibbon(boardCorners[i], boardCorners[(i + 1) % 4], pixel * (selected && _frame.LayersAmount > 0.01f ? 2f : 1f), edge);
 
-            for (var y = board.MinY; y <= board.MaxY + 1; y++)
-            {
-                var major = y % 4 == 0;
-                AddRibbon(new(left, y - 0.5f, z), new(right, y - 0.5f, z), pixel, Theme.White((major ? 0.075f : 0.04f) * boardAlpha));
-            }
+            // Grid: faint lines, slightly stronger every 4 cells, with dots where they cross
+            for (var x = board.MinX + 1; x <= board.MaxX; x++)
+                AddRibbon(new(x - 0.5f, bottom, z), new(x - 0.5f, top, z), pixel, Theme.White((x % 4 == 0 ? 0.05f : 0.022f) * boardAlpha));
+
+            for (var y = board.MinY + 1; y <= board.MaxY; y++)
+                AddRibbon(new(left, y - 0.5f, z), new(right, y - 0.5f, z), pixel, Theme.White((y % 4 == 0 ? 0.05f : 0.022f) * boardAlpha));
+
+            var dot = pixel * 1.5f;
+
+            for (var x = board.MinX + 1; x <= board.MaxX; x++)
+                for (var y = board.MinY + 1; y <= board.MaxY; y++)
+                    AddSquare(new Vector3(x - 0.5f, y - 0.5f, z), dot, Theme.White(0.1f * boardAlpha));
 
             // Hovered cell
-            if (layer == _frame.SelectedLayer && _frame.HoverCell is { } hover && hover.X >= board.MinX && hover.X <= board.MaxX && hover.Y >= board.MinY && hover.Y <= board.MaxY)
-                AddQuad(new(hover.X - 0.5f, hover.Y - 0.5f, z), new(hover.X + 0.5f, hover.Y - 0.5f, z),
-                        new(hover.X + 0.5f, hover.Y + 0.5f, z), new(hover.X - 0.5f, hover.Y + 0.5f, z), Theme.White(0.06f * alpha));
+            if (selected && _frame.HoverCell is { } hover && hover.X >= board.MinX && hover.X <= board.MaxX && hover.Y >= board.MinY && hover.Y <= board.MaxY)
+                AddRoundedRect(new Vector3(hover.X, hover.Y, z + 0.001f), 0.47f, 0.08f, Theme.White(0.05f * alpha));
 
-            // Routes within the layer
+            // Routes within the layer, with an arrowhead short of the target
             foreach (var connection in _frame.Model.Connections)
             {
                 if (connection.From.Z != layer || connection.To.Z != layer)
@@ -324,9 +348,19 @@ namespace Sift.App.Scene
                 var lift = z + 0.002f;
                 var from = new Vector3(connection.From.X, connection.From.Y, lift);
                 var to = new Vector3(connection.To.X, connection.To.Y, lift);
-                var colour = Theme.White((connection.HasTarget ? 0.09f : 0.045f) * alpha);
+                var direction = Vector3.Normalize(to - from);
+                var start = from + direction * (TILE_HALF_SIZE + 0.06f);
+                var end = to - direction * (connection.HasTarget ? TILE_HALF_SIZE + 0.1f : 0f);
+                var colour = Theme.White((connection.HasTarget ? 0.16f : 0.06f) * alpha);
 
-                AddRibbon(from, to, pixel * 2f, colour);
+                AddRibbon(start, end, pixel * 1.5f, colour, alongScreen: false);
+
+                if (connection.HasTarget)
+                {
+                    var side = new Vector3(-direction.Y, direction.X, 0f) * 0.08f;
+                    var tip = end + direction * 0.06f;
+                    AddTriangle(tip, end - direction * 0.08f + side, end - direction * 0.08f - side, colour);
+                }
             }
 
             // Nodes, back to front
@@ -344,20 +378,16 @@ namespace Sift.App.Scene
                 BuildNode(node, z, node.Id == _frame.DraggingNodeId ? alpha * 0.35f : alpha, pixel);
 
             // NOTE: Where a dragged node would land, red when the cell is taken
-            if (layer == _frame.SelectedLayer && _frame.DraggingNodeId is { } dragging && _frame.DragTarget is { } target
+            if (selected && _frame.DraggingNodeId is { } dragging && _frame.DragTarget is { } target
                 && _frame.Model.TryGetNode(dragging, out var dragged) && target != dragged.Position)
             {
                 var occupied = _frame.Model.NodeAt(target) != null;
-                var colour = occupied ? Theme.Rgba(Theme.Error, 0.9f) : Theme.White(0.9f);
-                var h = TILE_HALF_SIZE + 0.08f;
-                var lift = z + TILE_HEIGHT + 0.004f;
-                Vector3[] corners = [new(target.X - h, target.Y - h, lift), new(target.X + h, target.Y - h, lift), new(target.X + h, target.Y + h, lift), new(target.X - h, target.Y + h, lift)];
+                var centre = new Vector3(target.X, target.Y, z + TILE_HEIGHT + 0.004f);
 
                 if (!occupied)
-                    AddQuad(corners[0], corners[1], corners[2], corners[3], NodeColour(dragged) with { W = 0.45f * alpha });
+                    AddRoundedRect(centre, TILE_HALF_SIZE, TILE_RADIUS, NodeColour(dragged) with { W = 0.4f * alpha });
 
-                for (var i = 0; i < 4; i++)
-                    AddRibbon(corners[i], corners[(i + 1) % 4], pixel * 2f, colour, alongScreen: false);
+                AddRoundedOutline(centre, TILE_HALF_SIZE + 0.07f, TILE_RADIUS + 0.06f, pixel * 2f, occupied ? Theme.Rgba(Theme.Error, 0.9f) : Theme.White(0.85f));
             }
         }
 
@@ -366,73 +396,87 @@ namespace Sift.App.Scene
             var colour = NodeColour(node);
 
             if (_frame.Model.IsSounding(node.Id))
-                colour = Vector4.Lerp(colour, Vector4.One, 0.3f);
+                colour = Vector4.Lerp(colour, Vector4.One, 0.35f);
 
-            colour.W = alpha;
-            var sides = new Vector4(colour.X * 0.55f, colour.Y * 0.55f, colour.Z * 0.6f, alpha);
+            if (!node.IsActive)
+                colour = Vector4.Lerp(colour, Theme.Rgba(Theme.Dimmed), 0.6f);
 
             var x = node.Position.X;
             var y = node.Position.Y;
-            var h = TILE_HALF_SIZE;
             var topZ = z + TILE_HEIGHT;
+            var centre = new Vector3(x, y, z);
 
-            Vector3[] bottom = [new(x - h, y - h, z), new(x + h, y - h, z), new(x + h, y + h, z), new(x - h, y + h, z)];
-            Vector3[] top = [new(x - h, y - h, topZ), new(x + h, y - h, topZ), new(x + h, y + h, topZ), new(x - h, y + h, topZ)];
+            // A soft shadow on the board
+            AddRoundedRect(centre + new Vector3(0.04f, -0.07f, 0.001f), TILE_HALF_SIZE + 0.06f, TILE_RADIUS + 0.05f, new Vector4(0f, 0f, 0f, 0.18f * alpha));
+            AddRoundedRect(centre + new Vector3(0.02f, -0.04f, 0.0015f), TILE_HALF_SIZE + 0.02f, TILE_RADIUS + 0.02f, new Vector4(0f, 0f, 0f, 0.22f * alpha));
 
-            // NOTE: Sides back to front then the top, so the box reads as solid from any angle
+            // Sides, back to front, then the top with a gentle light from above
+            BuildOutline(TILE_HALF_SIZE, TILE_RADIUS);
+            var sides = new Vector4(colour.X * 0.5f, colour.Y * 0.5f, colour.Z * 0.56f, alpha);
+
             _faceOrder.Clear();
 
-            for (var i = 0; i < 4; i++)
+            for (var i = 0; i < _outline.Count; i++)
             {
-                var next = (i + 1) % 4;
+                var a = _outline[i];
+                var b = _outline[(i + 1) % _outline.Count];
                 var start = _triangles.Count;
 
-                AddQuad(bottom[i], bottom[next], top[next], top[i], sides);
-                _faceOrder.Add((_frame.Camera.Depth((bottom[i] + top[next]) / 2f), start, _triangles.Count - start));
+                AddQuad(new(x + a.X, y + a.Y, z), new(x + b.X, y + b.Y, z), new(x + b.X, y + b.Y, topZ), new(x + a.X, y + a.Y, topZ), sides);
+                _faceOrder.Add((_frame.Camera.Depth(new Vector3(x + (a.X + b.X) / 2f, y + (a.Y + b.Y) / 2f, z)), start, _triangles.Count - start));
             }
 
             SortFaces();
 
-            AddQuad(top[0], top[1], top[2], top[3], colour);
+            var light = Vector4.Lerp(colour, Vector4.One, 0.18f) with { W = alpha };
+            var dark = (colour * 0.92f) with { W = alpha };
+            var topCentre = new Vector3(x, y, topZ);
 
-            // Ports with something on them
-            var marker = Theme.White(0.75f * alpha);
+            for (var i = 0; i < _outline.Count; i++)
+            {
+                var a = _outline[i];
+                var b = _outline[(i + 1) % _outline.Count];
+
+                AddVertex(topCentre, Vector4.Lerp(dark, light, 0.5f));
+                AddVertex(new Vector3(x + a.X, y + a.Y, topZ), Vector4.Lerp(dark, light, (a.Y / TILE_HALF_SIZE + 1f) / 2f));
+                AddVertex(new Vector3(x + b.X, y + b.Y, topZ), Vector4.Lerp(dark, light, (b.Y / TILE_HALF_SIZE + 1f) / 2f));
+            }
+
             var lift = topZ + 0.002f;
 
+            // What it is
+            if (Primary(node) is { } primary)
+                AddIcon(primary.Type, new Vector3(x, y, lift + 0.001f), 0.17f, new Vector4(1f, 1f, 1f, 0.92f * alpha));
+
+            // Ports with something on them: a small bar on that edge in the colour of what's there, arrows for the layers
             foreach (var (direction, components) in node.Ports)
             {
                 if (components.Count == 0)
                     continue;
 
+                var marker = Vector4.Lerp(Theme.Rgba(Theme.CategoryColour(components[0].Category)), Vector4.One, 0.55f) with { W = 0.9f * alpha };
+
                 switch (direction)
                 {
                     case Direction.Forwards:
-                        AddSquare(new Vector3(x, y, lift), 0.07f, marker);
+                        AddTriangle(new(x + 0.27f, y + 0.31f, lift), new(x + 0.19f, y + 0.19f, lift), new(x + 0.35f, y + 0.19f, lift), marker);
                         break;
 
                     case Direction.Backwards:
-                        AddSquare(new Vector3(x, y, lift), 0.07f, new Vector4(0f, 0f, 0f, 0.45f * alpha));
+                        AddTriangle(new(x + 0.27f, y - 0.31f, lift), new(x + 0.35f, y - 0.19f, lift), new(x + 0.19f, y - 0.19f, lift), marker);
                         break;
 
                     default:
                         var step = direction.ToVector();
-                        var along = new Vector3(step.Y, step.X, 0f) * 0.17f;
-                        var centre = new Vector3(x + step.X * 0.3f, y + step.Y * 0.3f, lift);
-                        AddRibbon(centre - along, centre + along, 0.07f, marker, alongScreen: false);
+                        var along = new Vector3(step.Y, step.X, 0f) * 0.13f;
+                        var edgeCentre = new Vector3(x + step.X * 0.3f, y + step.Y * 0.3f, lift);
+                        AddRibbon(edgeCentre - along, edgeCentre + along, 0.05f, marker, alongScreen: false);
                         break;
                 }
             }
 
             if (_frame.SelectedNodeId == node.Id)
-            {
-                var outline = Theme.White(0.95f * alpha);
-                var o = h + 0.08f;
-                var oz = topZ + 0.003f;
-                Vector3[] corners = [new(x - o, y - o, oz), new(x + o, y - o, oz), new(x + o, y + o, oz), new(x - o, y + o, oz)];
-
-                for (var i = 0; i < 4; i++)
-                    AddRibbon(corners[i], corners[(i + 1) % 4], pixel * 2f, outline, alongScreen: false);
-            }
+                AddRoundedOutline(new Vector3(x, y, topZ + 0.003f), TILE_HALF_SIZE + 0.08f, TILE_RADIUS + 0.07f, pixel * 2f, Theme.Rgba(Theme.Accent, 0.95f * alpha));
         }
 
         // NOTE: Forwards/backwards routes between layers, drawn over everything so they read in the isometric view
@@ -500,13 +544,16 @@ namespace Sift.App.Scene
                 if (fade < 0.01f)
                     continue;
 
-                var colour = flash.IsDissipation ? Theme.White(0.35f * fade)
-                    : flash.IsPlay ? Theme.Rgba(Theme.Accent, fade)
-                    : Theme.Rgba(Theme.Message, fade);
+                var colour = flash.IsDissipation ? Theme.White(0.25f * fade)
+                    : flash.IsPlay ? Theme.Rgba(Theme.Accent, 0.6f * fade)
+                    : Theme.Rgba(Theme.Message, 0.5f * fade);
 
-                var radius = flash.IsDissipation ? 0.4f + amount * 0.3f : 0.8f + amount * 0.6f;
+                var radius = flash.IsDissipation ? 0.4f + amount * 0.3f : 0.7f + amount * 0.5f;
                 AddGlow(World(flash.Position, lift), cellPixels * radius, colour);
             }
+
+            if (_frame.SelectedNodeId is { } selectedId && _frame.Model.TryGetNode(selectedId, out var selectedNode))
+                AddGlow(World(selectedNode.Position, lift), cellPixels * 0.95f, Theme.Rgba(Theme.Accent, 0.16f * LayerAlpha(selectedNode.Position.Z, _frame.SelectedLayer, _frame.LayersAmount)));
 
             foreach (var node in _frame.Model.Nodes)
             {
@@ -514,7 +561,7 @@ namespace Sift.App.Scene
                     continue;
 
                 var alpha = LayerAlpha(node.Position.Z, _frame.SelectedLayer, _frame.LayersAmount);
-                AddGlow(World(node.Position, lift), cellPixels * 0.9f, Theme.Rgba(Theme.Midi, 0.55f * alpha));
+                AddGlow(World(node.Position, lift), cellPixels * 0.85f, Theme.Rgba(Theme.Sound, 0.4f * alpha));
             }
         }
 
@@ -533,17 +580,13 @@ namespace Sift.App.Scene
         private Vector3 World(Vector3D position, float lift) =>
             new(position.X, position.Y, position.Z * _layerSpacing + lift);
 
-        private static Vector4 NodeColour(NodeSnapshot node)
-        {
-            var types = node.Ports.Values.SelectMany(x => x).Select(x => x.Type).ToHashSet();
+        // NOTE: The node's first component, going round the ports in order, decides its colour and icon, so the order
+        // you add components in sets how a node looks
+        private static ComponentSnapshot? Primary(NodeSnapshot node) =>
+            SiftHost.PORT_ORDER.SelectMany(x => node.Ports.TryGetValue(x, out var components) ? components : []).FirstOrDefault();
 
-            if (types.Contains("midi")) return Theme.Rgba(Theme.Midi);
-            if (types.Contains("emit")) return Theme.Rgba(Theme.Emit);
-            if (types.Contains("redirect")) return Theme.Rgba(Theme.Redirect);
-            if (types.Contains("log")) return Theme.Rgba(Theme.Log);
-
-            return Theme.Rgba(Theme.Dimmed);
-        }
+        private static Vector4 NodeColour(NodeSnapshot node) =>
+            Primary(node) is { } primary ? Theme.Rgba(Theme.CategoryColour(primary.Category)) : Theme.Rgba(Theme.Dimmed);
 
         // ── Geometry ─────────────────────────────────────────────────────────
 
@@ -551,6 +594,52 @@ namespace Sift.App.Scene
         {
             AddVertex(a, colour); AddVertex(b, colour); AddVertex(c, colour);
             AddVertex(a, colour); AddVertex(c, colour); AddVertex(d, colour);
+        }
+
+        private void AddTriangle(Vector3 a, Vector3 b, Vector3 c, Vector4 colour)
+        {
+            AddVertex(a, colour); AddVertex(b, colour); AddVertex(c, colour);
+        }
+
+        // NOTE: A rounded square's outline (relative to its centre) into _outline, anticlockwise
+        private void BuildOutline(float halfSize, float radius)
+        {
+            _outline.Clear();
+            var inner = halfSize - radius;
+            ReadOnlySpan<Vector2> corners = [new(inner, inner), new(-inner, inner), new(-inner, -inner), new(inner, -inner)];
+
+            for (var corner = 0; corner < 4; corner++)
+            {
+                for (var i = 0; i <= CORNER_SEGMENTS; i++)
+                {
+                    var angle = (corner + i / (float)CORNER_SEGMENTS) * MathF.PI / 2f;
+                    _outline.Add(corners[corner] + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius);
+                }
+            }
+        }
+
+        private void AddRoundedRect(Vector3 centre, float halfSize, float radius, Vector4 colour)
+        {
+            BuildOutline(halfSize, radius);
+
+            for (var i = 0; i < _outline.Count; i++)
+            {
+                var a = _outline[i];
+                var b = _outline[(i + 1) % _outline.Count];
+                AddTriangle(centre, centre + new Vector3(a, 0f), centre + new Vector3(b, 0f), colour);
+            }
+        }
+
+        private void AddRoundedOutline(Vector3 centre, float halfSize, float radius, float width, Vector4 colour)
+        {
+            BuildOutline(halfSize, radius);
+
+            for (var i = 0; i < _outline.Count; i++)
+            {
+                var a = _outline[i];
+                var b = _outline[(i + 1) % _outline.Count];
+                AddRibbon(centre + new Vector3(a, 0f), centre + new Vector3(b, 0f), width, colour, alongScreen: false);
+            }
         }
 
         private void AddSquare(Vector3 centre, float halfSize, Vector4 colour) =>
@@ -632,6 +721,12 @@ namespace Sift.App.Scene
             _gl.BlendFuncSeparate(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha, BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
 
             _gl.UseProgram(_flatProgram);
+
+            var identity = Matrix4x4.Identity;
+            _gl.UniformMatrix4(_flatViewProjection, 1, false, (float*)&identity);
+            Upload(_flatVao, _flatVbo, _background);
+            _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint)(_background.Count / 7));
+
             _gl.UniformMatrix4(_flatViewProjection, 1, false, (float*)&viewProjection);
             Upload(_flatVao, _flatVbo, _triangles);
             _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint)(_triangles.Count / 7));
