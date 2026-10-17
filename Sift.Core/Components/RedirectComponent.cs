@@ -4,7 +4,7 @@ using Sift.Core.Models.Nodes;
 
 namespace Sift.Core.Components
 {
-    public sealed record RedirectConfig(Direction To) : IComponentConfig;
+    public sealed record RedirectConfig(Direction To = Direction.Up) : IComponentConfig;
 
     [ComponentType("redirect")]
     public class RedirectComponent : Component<RedirectConfig>

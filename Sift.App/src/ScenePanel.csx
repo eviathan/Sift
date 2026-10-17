@@ -6,8 +6,10 @@ UINode ScenePanel(Props _) {
   var viewport = UI.Viewport(host.SceneTexture, new Paper.Core.Styles.StyleSheet { FlexGrow = 1f },
     onSizeChanged: (w, h) => host.SetViewportSize(w, h));
 
-  // NOTE: A transparent layer over the viewport takes the pointer, as in Prism's scene panel
+  // NOTE: A transparent layer over the viewport takes the pointer, as in Prism's scene panel. Focusable so clicking
+  // the scene takes focus from the sidebar's fields (committing them) and the keyboard shortcuts work again
   var overlay = UI.Box(new PropsBuilder()
+    .TabIndex(-1)
     .Style(new Paper.Core.Styles.StyleSheet {
       Position = Paper.Core.Styles.Position.Absolute,
       Left = Paper.Core.Styles.Length.Px(0),

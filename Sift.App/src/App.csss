@@ -41,10 +41,9 @@ $error:          #FF8080;
 .body {
   display: flex;
   flex-direction: row;
-  align-items: stretch;
   flex-grow: 1;
   min-height: 0;
-  /* NOTE: The sidebar's colour, so it reads as full height whatever its content (the scene covers the rest) */
+  position: relative;
   background: $panel;
 }
 
@@ -86,13 +85,15 @@ $error:          #FF8080;
 }
 
 /* -- Sidebar -------------------------------------------------------------------- */
+/* NOTE: Pinned to the body's edges, Paper doesn't stretch a flex child to its row's height */
 .sidebar {
   display: flex;
   flex-direction: column;
-  width: 300px;
-  flex-shrink: 0;
-  padding: 16px 14px;
-  gap: 10px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
   overflow: hidden;
 }
 

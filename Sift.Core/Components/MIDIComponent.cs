@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Sift.Core.Enums;
 using Sift.Core.Events;
 using Sift.Core.Extensions;
@@ -6,7 +7,12 @@ using Sift.Core.Models.Nodes;
 
 namespace Sift.Core.Components
 {
-    public sealed record MidiConfig(int Note = 60, int Velocity = 100, int Channel = 1, NoteDuration Duration = NoteDuration.SixteenthNote) : IComponentConfig
+    // NOTE: The Range attributes are for editors (the UI clamps to them), Validate is what's enforced
+    public sealed record MidiConfig(
+        [Range(0, 127)] int Note = 60,
+        [Range(1, 127)] int Velocity = 100,
+        [Range(1, 16)] int Channel = 1,
+        NoteDuration Duration = NoteDuration.SixteenthNote) : IComponentConfig
     {
         public void Validate()
         {

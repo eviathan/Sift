@@ -16,6 +16,8 @@ namespace Sift.App.Scene
         float LayersAmount,
         Guid? SelectedNodeId,
         Vector3D? HoverCell,
+        Guid? DraggingNodeId,
+        Vector3D? DragTarget,
         float Width,
         float Height,
         float DpiScale,
@@ -282,7 +284,9 @@ namespace Sift.App.Scene
             var top = board.MaxY + 0.5f;
 
             // The board
-            AddQuad(new(left, bottom, z), new(right, bottom, z), new(right, top, z), new(left, top, z), Theme.Rgba(Theme.Card, 0.94f * alpha));
+            // NOTE: Ghost layers fade their board much more than their nodes, so they read as nodes floating above/below
+            var boardAlpha = layer == _frame.SelectedLayer ? alpha : alpha * alpha;
+            AddQuad(new(left, bottom, z), new(right, bottom, z), new(right, top, z), new(left, top, z), Theme.Rgba(Theme.Card, 0.94f * boardAlpha));
 
             // NOTE: Outline the selected layer in the isometric view so it's clear which one Enter opens
             if (layer == _frame.SelectedLayer && _frame.LayersAmount > 0.01f)
@@ -297,13 +301,13 @@ namespace Sift.App.Scene
             for (var x = board.MinX; x <= board.MaxX + 1; x++)
             {
                 var major = x % 4 == 0;
-                AddRibbon(new(x - 0.5f, bottom, z), new(x - 0.5f, top, z), pixel, Theme.White((major ? 0.075f : 0.04f) * alpha));
+                AddRibbon(new(x - 0.5f, bottom, z), new(x - 0.5f, top, z), pixel, Theme.White((major ? 0.075f : 0.04f) * boardAlpha));
             }
 
             for (var y = board.MinY; y <= board.MaxY + 1; y++)
             {
                 var major = y % 4 == 0;
-                AddRibbon(new(left, y - 0.5f, z), new(right, y - 0.5f, z), pixel, Theme.White((major ? 0.075f : 0.04f) * alpha));
+                AddRibbon(new(left, y - 0.5f, z), new(right, y - 0.5f, z), pixel, Theme.White((major ? 0.075f : 0.04f) * boardAlpha));
             }
 
             // Hovered cell
@@ -337,7 +341,24 @@ namespace Sift.App.Scene
             _nodeOrder.Sort((a, b) => a.Depth.CompareTo(b.Depth));
 
             foreach (var (_, node) in _nodeOrder)
-                BuildNode(node, z, alpha, pixel);
+                BuildNode(node, z, node.Id == _frame.DraggingNodeId ? alpha * 0.35f : alpha, pixel);
+
+            // NOTE: Where a dragged node would land, red when the cell is taken
+            if (layer == _frame.SelectedLayer && _frame.DraggingNodeId is { } dragging && _frame.DragTarget is { } target
+                && _frame.Model.TryGetNode(dragging, out var dragged) && target != dragged.Position)
+            {
+                var occupied = _frame.Model.NodeAt(target) != null;
+                var colour = occupied ? Theme.Rgba(Theme.Error, 0.9f) : Theme.White(0.9f);
+                var h = TILE_HALF_SIZE + 0.08f;
+                var lift = z + TILE_HEIGHT + 0.004f;
+                Vector3[] corners = [new(target.X - h, target.Y - h, lift), new(target.X + h, target.Y - h, lift), new(target.X + h, target.Y + h, lift), new(target.X - h, target.Y + h, lift)];
+
+                if (!occupied)
+                    AddQuad(corners[0], corners[1], corners[2], corners[3], NodeColour(dragged) with { W = 0.45f * alpha });
+
+                for (var i = 0; i < 4; i++)
+                    AddRibbon(corners[i], corners[(i + 1) % 4], pixel * 2f, colour, alongScreen: false);
+            }
         }
 
         private void BuildNode(NodeSnapshot node, float z, float alpha, float pixel)

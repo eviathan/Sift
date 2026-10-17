@@ -50,6 +50,15 @@ namespace Sift.App.Scene
         public bool CanUndo { get; private set; }
         public bool CanRedo { get; private set; }
 
+        // NOTE: The last of the user's commands the runtime turned down, for showing in the sidebar
+        public (string Message, double At, bool Expired)? LastError { get; private set; }
+
+        public void ExpireError()
+        {
+            if (LastError is { } error)
+                LastError = error with { Expired = true };
+        }
+
         // NOTE: The subscriber fell behind, the host takes a new snapshot
         public bool NeedsResync { get; private set; }
 
@@ -185,6 +194,10 @@ namespace Sift.App.Scene
                 case HistoryChanged history:
                     CanUndo = history.CanUndo;
                     CanRedo = history.CanRedo;
+                    return true;
+
+                case CommandRejected rejected when rejected.Source == CommandSource.User:
+                    LastError = (rejected.Error, now, false);
                     return true;
 
                 case EventsDropped:

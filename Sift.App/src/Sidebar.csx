@@ -1,48 +1,19 @@
 using Sift.App;
+using Sift.App.Editing;
 
 UINode Sidebar(Props _) {
   var host = Sift.App.SiftHost.Current;
   var node = host.SelectedNode;
   var content = new List<UINode>();
 
+  if (host.LastError is { } error)
+    content.Add(Widgets.Warning(error));
+
   if (node != null) {
-    var position = node.Position;
-    var nodeId = node.Id;
-
-    content.Add(Widgets.TextOf("NODE", "heading"));
-    content.Add(Widgets.BoxOf("card", new[] {
-      Widgets.TextOf(node.Name ?? "Untitled", "title"),
-      Widgets.Row("Position", position.X.ToString() + ", " + position.Y.ToString() + "  (layer " + position.Z.ToString() + ")"),
-      Widgets.Row("Starts on play", node.EmitOnPlay ? "Yes" : "No"),
-      Widgets.Row("Active", node.IsActive ? "Yes" : "No"),
-    }));
-
-    var ports = new List<UINode>();
-    var order = new[] { Sift.Core.Enums.Direction.Up, Sift.Core.Enums.Direction.Right, Sift.Core.Enums.Direction.Down, Sift.Core.Enums.Direction.Left, Sift.Core.Enums.Direction.Forwards, Sift.Core.Enums.Direction.Backwards };
-
-    foreach (var direction in order) {
-      if (!node.Ports.TryGetValue(direction, out var components) || components.Count == 0)
-        continue;
-
-      var chips = components.Select(c => Widgets.Chip(c.Type)).ToList();
-      ports.Add(Widgets.BoxOf("row", new[] { Widgets.TextOf(direction.ToString(), "row-label"), Widgets.BoxOf("chips", chips) }));
-    }
-
-    if (ports.Count == 0)
-      ports.Add(Widgets.TextOf("Nothing on any port", "note"));
-
-    content.Add(Widgets.TextOf("PORTS", "heading"));
-    content.Add(Widgets.BoxOf("card", ports));
-    content.Add(Widgets.BoxOf("row", new[] {
-      Widgets.Pill("Delete node", () => host.DeleteNode(nodeId), Sift.App.Theme.Error),
-    }));
+    content.AddRange(Inspector.Node(host, node));
   }
   else if (host.SelectedCell is { } cell) {
-    content.Add(Widgets.TextOf("EMPTY CELL", "heading"));
-    content.Add(Widgets.BoxOf("card", new[] {
-      Widgets.Row("Position", cell.X.ToString() + ", " + cell.Y.ToString() + "  (layer " + cell.Z.ToString() + ")"),
-      Widgets.TextOf("Adding nodes here is coming next.", "note"),
-    }));
+    content.AddRange(Inspector.EmptyCell(host, cell));
   }
   else {
     var (minLayer, maxLayer) = host.Layers;
@@ -71,10 +42,21 @@ UINode Sidebar(Props _) {
       Widgets.Row("Play / stop", "Space"),
       Widgets.Row("2D / layers", "Tab"),
       Widgets.Row("Layer up / down", "] / ["),
+      Widgets.Row("Add node", "Double-click"),
+      Widgets.Row("Move node", "Drag"),
       Widgets.Row("Delete node", "Delete"),
       Widgets.Row("Undo / redo", "Cmd Z / Cmd Shift Z"),
     }));
   }
 
-  return Widgets.BoxOf("sidebar", content);
+  // NOTE: Scrolls when a node's ports run past the bottom
+  var scroll = UI.Scroll(new Paper.Core.Styles.StyleSheet {
+    FlexGrow = 1f,
+    Display = Paper.Core.Styles.Display.Flex,
+    FlexDirection = Paper.Core.Styles.FlexDirection.Column,
+    Gap = Paper.Core.Styles.Length.Px(10),
+    Padding = new Paper.Core.Styles.Thickness(Paper.Core.Styles.Length.Px(16), Paper.Core.Styles.Length.Px(14)),
+  }, content.ToArray());
+
+  return Widgets.BoxOf("sidebar", new[] { scroll });
 }

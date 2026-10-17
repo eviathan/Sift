@@ -2,12 +2,17 @@ using System.Numerics;
 using Paper.Core.Threading;
 using Paper.Rendering.Silk.NET;
 using Silk.NET.OpenGL;
+using Sift.App.Editing;
 using Sift.App.Scene;
 using Sift.Core;
 using Sift.Core.Commands;
+using Sift.Core.Components;
+using Sift.Core.Enums;
 using Sift.Core.Events;
 using Sift.Core.Factories;
 using Sift.Core.Grid;
+using Sift.Core.Interfaces;
+using Sift.Core.Nodes;
 using Sift.Core.Snapshots;
 
 namespace Sift.App
@@ -38,8 +43,11 @@ namespace Sift.App
         private const float WHEEL_LAYER_THRESHOLD = 1f;
         private const int SIXTEENTHS_PER_BAR = 16;
         private const int TICKS_PER_SIXTEENTH = Time.TicksPerQuarterNote / 4;
+        private const float DRAG_THRESHOLD = 4f;
+        private const double ERROR_SECONDS = 4;
 
         private readonly RuntimeEventHub _events;
+        private readonly ComponentRegistry _registry;
         private Canvas? _canvas;
         private GL? _gl;
         private SceneRenderer? _renderer;
@@ -57,6 +65,11 @@ namespace Sift.App
         private bool _commandHeld;
         private bool _shiftHeld;
 
+        // NOTE: A press on a node becomes a drag once the pointer moves far enough
+        private Guid? _pressedNodeId;
+        private (float X, float Y) _pressedAt;
+        private bool _isDragging;
+
         public Sequence Sequence { get; }
         public Sequencer Sequencer { get; }
         public SequencerRuntime Runtime { get; }
@@ -70,6 +83,17 @@ namespace Sift.App
         public Guid? SelectedNodeId { get; private set; }
         public Vector3D? SelectedCell { get; private set; }
         public Vector3D? HoverCell { get; private set; }
+
+        // NOTE: Where a dragged node would land
+        public Vector3D? DragTarget { get; private set; }
+
+        // NOTE: The port whose "add component" menu is open in the sidebar
+        public Direction? AddingToPort { get; private set; }
+
+        public string? LastError => Scene.LastError is { } error && SceneModel.Seconds - error.At < ERROR_SECONDS ? error.Message : null;
+
+        // NOTE: The component types that can be added, by their saved name
+        public IReadOnlyList<string> ComponentTypes => _registry.Registrations.Select(x => x.Name).Order().ToList();
 
         // NOTE: Switch to the layers view once the first frame has laid out the scene
         public bool StartInLayers { get; set; }
@@ -86,13 +110,14 @@ namespace Sift.App
         public (int Min, int Max) Layers =>
             SceneRenderer.LayerRange(Scene, Layer);
 
-        public SiftHost(Sequence sequence, Sequencer sequencer, SequencerRuntime runtime, ComponentFactory components, RuntimeEventHub events)
+        public SiftHost(Sequence sequence, Sequencer sequencer, SequencerRuntime runtime, ComponentFactory components, RuntimeEventHub events, ComponentRegistry registry)
         {
             Sequence = sequence;
             Sequencer = sequencer;
             Runtime = runtime;
             Components = components;
             _events = events;
+            _registry = registry;
 
             Camera = new SceneCamera(PlanePose());
         }
@@ -123,9 +148,9 @@ namespace Sift.App
 
             var uiChanged = ReadEvents();
 
-            if (SelectedNodeId is { } selected && !Scene.TryGetNode(selected, out _))
+            if (Scene.LastError is { } error && SceneModel.Seconds - error.At >= ERROR_SECONDS && !error.Expired)
             {
-                SelectedNodeId = null;
+                Scene.ExpireError();
                 uiChanged = true;
             }
 
@@ -152,7 +177,7 @@ namespace Sift.App
 
             // NOTE: Only keep Paper rendering every frame while something is moving
             if (_canvas != null)
-                _canvas.AlwaysRender = Scene.IsPlaying || Camera.IsAnimating || Scene.HasActiveEffects;
+                _canvas.AlwaysRender = Scene.IsPlaying || Camera.IsAnimating || Scene.HasActiveEffects || LastError != null;
 
             if (uiChanged)
                 MarkDirty();
@@ -197,10 +222,92 @@ namespace Sift.App
             MarkDirty();
         }
 
-        public void DeleteNode(Guid nodeId)
+        // ── Editing ──────────────────────────────────────────────────────────
+        // NOTE: Everything goes through the runtime's commands, so it's undoable and safe while playing. The scene
+        // catches up from the events they raise
+
+        public void AddNodeAt(Vector3D cell)
         {
-            _ = Runtime.Submit(new RemoveNode(nodeId));
+            if (Scene.NodeAt(cell) != null)
+                return;
+
+            var node = new Node(cell) { Name = NextNodeName() };
+            Submit(new AddNode(node));
+
+            SelectedNodeId = node.Id;
+            SelectedCell = cell;
             MarkDirty();
+        }
+
+        public void DeleteNode(Guid nodeId) =>
+            Submit(new RemoveNode(nodeId));
+
+        public void MoveNode(Guid nodeId, Vector3D to) =>
+            Submit(new MoveNode(nodeId, to));
+
+        // NOTE: Moves the node to the layer above or below and follows it there
+        public void MoveNodeLayer(Guid nodeId, int offset)
+        {
+            if (!Scene.TryGetNode(nodeId, out var node))
+                return;
+
+            var to = new Vector3D(node.Position.X, node.Position.Y, node.Position.Z + offset);
+            Submit(new MoveNode(nodeId, to));
+
+            if (Scene.NodeAt(to) == null)
+                SetLayer(to.Z, keepSelection: true);
+        }
+
+        public void RenameNode(Guid nodeId, string name)
+        {
+            if (Scene.TryGetNode(nodeId, out var node) && node.Name != name)
+                Submit(new UpdateNode(nodeId, Name: name));
+        }
+
+        public void SetEmitOnPlay(Guid nodeId, bool emitOnPlay) =>
+            Submit(new UpdateNode(nodeId, EmitOnPlay: emitOnPlay));
+
+        public void SetActive(Guid nodeId, bool isActive) =>
+            Submit(new UpdateNode(nodeId, IsActive: isActive));
+
+        public void ToggleAddMenu(Direction port)
+        {
+            AddingToPort = AddingToPort == port ? null : port;
+            MarkDirty();
+        }
+
+        public void AddComponent(Guid nodeId, Direction port, string type)
+        {
+            AddingToPort = null;
+
+            if (!_registry.TryGetByName(type, out var registration))
+                return;
+
+            Submit(new AddComponent(nodeId, port, Components.Create(ConfigFields.CreateDefault(registration.ConfigType))));
+        }
+
+        public void RemoveComponent(Guid nodeId, Direction port, Guid componentId) =>
+            Submit(new RemoveComponent(nodeId, port, componentId));
+
+        public void UpdateComponent(Guid nodeId, Direction port, Guid componentId, IComponentConfig config) =>
+            Submit(new UpdateComponentConfig(nodeId, port, componentId, config));
+
+        private void Submit(IGridCommand command)
+        {
+            // NOTE: Rejections come back as CommandRejected events and show in the sidebar
+            _ = Runtime.Submit(command);
+            MarkDirty();
+        }
+
+        private string NextNodeName()
+        {
+            var names = Scene.Nodes.Select(x => x.Name).ToHashSet();
+
+            for (var i = Scene.Nodes.Count + 1; ; i++)
+            {
+                if (!names.Contains($"Node {i}"))
+                    return $"Node {i}";
+            }
         }
 
         // ── View ─────────────────────────────────────────────────────────────
@@ -219,15 +326,21 @@ namespace Sift.App
             MarkDirty();
         }
 
-        public void SetLayer(int layer)
+        public void SetLayer(int layer, bool keepSelection = false)
         {
             if (layer == Layer)
                 return;
 
             Layer = layer;
-            SelectedNodeId = null;
-            SelectedCell = null;
             HoverCell = null;
+            AddingToPort = null;
+
+            if (!keepSelection)
+            {
+                SelectedNodeId = null;
+                SelectedCell = null;
+            }
+
             Camera.AnimateTo(Mode == ViewMode.Plane ? PlanePose() : LayersPose(), SceneModel.Seconds);
             MarkDirty();
         }
@@ -249,6 +362,15 @@ namespace Sift.App
 
             var hover = Mode == ViewMode.Plane ? PickCell(x, y) : null;
 
+            if (_pressedNodeId != null && !_isDragging && MathF.Abs(x - _pressedAt.X) + MathF.Abs(y - _pressedAt.Y) > DRAG_THRESHOLD)
+                _isDragging = true;
+
+            if (_isDragging && hover != DragTarget)
+            {
+                DragTarget = hover;
+                MarkDirty();
+            }
+
             if (hover != HoverCell)
             {
                 HoverCell = hover;
@@ -259,6 +381,7 @@ namespace Sift.App
         public void PointerLeave()
         {
             _panAnchor = null;
+            CancelDrag();
 
             if (HoverCell != null)
             {
@@ -288,16 +411,51 @@ namespace Sift.App
             var cell = PickCell(x, y);
             SelectedCell = cell;
             SelectedNodeId = cell is { } position ? Scene.NodeAt(position)?.Id : null;
+            AddingToPort = null;
+
+            _pressedNodeId = SelectedNodeId;
+            _pressedAt = (x, y);
             MarkDirty();
         }
 
-        public void PointerUp() =>
+        public void PointerUp()
+        {
             _panAnchor = null;
+
+            // NOTE: Drop a dragged node on an empty cell
+            if (_isDragging && _pressedNodeId is { } nodeId && DragTarget is { } target && Scene.TryGetNode(nodeId, out var node)
+                && target != node.Position && Scene.NodeAt(target) == null)
+            {
+                MoveNode(nodeId, target);
+                SelectedCell = target;
+            }
+
+            CancelDrag();
+        }
 
         public void DoubleClick()
         {
             if (Mode == ViewMode.Layers)
+            {
                 SetMode(ViewMode.Plane);
+                return;
+            }
+
+            // NOTE: Double-clicking an empty cell adds a node there
+            if (SelectedNodeId == null && SelectedCell is { } cell)
+                AddNodeAt(cell);
+        }
+
+        private void CancelDrag()
+        {
+            var wasDragging = _isDragging;
+
+            _pressedNodeId = null;
+            _isDragging = false;
+            DragTarget = null;
+
+            if (wasDragging)
+                MarkDirty();
         }
 
         public void Wheel(float x, float y, float width, float height, float deltaX, float deltaY, bool zoom)
@@ -362,6 +520,8 @@ namespace Sift.App
                     {
                         SelectedNodeId = null;
                         SelectedCell = null;
+                        AddingToPort = null;
+                        CancelDrag();
                         MarkDirty();
                     }
                     return true;
@@ -448,7 +608,16 @@ namespace Sift.App
             }
 
             while (_subscription!.Reader.TryRead(out var runtimeEvent))
+            {
                 uiChanged |= Scene.Apply(runtimeEvent);
+
+                // NOTE: Cleared on the event rather than by checking the scene, a node just added isn't in it yet
+                if (runtimeEvent is NodeRemoved removed && removed.NodeId == SelectedNodeId)
+                {
+                    SelectedNodeId = null;
+                    AddingToPort = null;
+                }
+            }
 
             if (Scene.NeedsResync && _pendingSnapshot == null)
                 _pendingSnapshot = Runtime.GetSnapshotAsync();
@@ -463,6 +632,8 @@ namespace Sift.App
                 LayersAmount,
                 SelectedNodeId,
                 Mode == ViewMode.Plane ? HoverCell : null,
+                _isDragging ? _pressedNodeId : null,
+                _isDragging ? DragTarget : null,
                 _viewWidth,
                 _viewHeight,
                 ReadDpiScale(),
